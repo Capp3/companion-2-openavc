@@ -16,7 +16,7 @@ dependencies = [
   "tree-sitter-javascript>=0.23",
   "pydantic>=2.10",
   "pyyaml>=6.0",
-  "httpx>=0.28",
+  "httpx>=0.28.1",
 ]
 
 [project.scripts]
