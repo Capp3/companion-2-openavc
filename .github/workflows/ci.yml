@@ -27,13 +27,16 @@ jobs:
         run: uv run ruff check .
 
       - name: isort
-        run: uv run isort --check .
+        run: uv run isort --check c2o tests
+
+      - name: black
+        run: uv run black --check c2o tests
 
       - name: mypy
-        run: uv run mypy c2o
+        run: uv run mypy c2o tests
 
       - name: pytest
-        run: uv run pytest --cov=c2o --cov-fail-under=0
+        run: uv run pytest --cov=c2o --cov-fail-under=85
 
       - name: Build package
         run: uv build

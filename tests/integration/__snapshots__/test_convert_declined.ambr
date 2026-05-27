@@ -1,0 +1,18 @@
+# serializer version: 1
+# name: test_convert_declined_udp_writes_golden_json
+  dict({
+    'blockers': list([
+      dict({
+        'code': 'transport_udp',
+        'evidence': "index.js:1 — import { InstanceBase, runEntrypoint, UDPHelper } from '@companion-module/base'",
+        'message': 'Module uses UDPHelper; OpenAVC recommends a Python driver for UDP protocols.',
+        'upstream_reference': 'open-avc/openavc-drivers AGENTS.md §1 — UDP broadcast/multicast? Use Python.',
+      }),
+    ]),
+    'declined_at': '2026-01-01T00:00:00Z',
+    'eligible': False,
+    'module_id': 'declined_udp',
+    'recommendation': 'This Companion module cannot be converted to a .avcdriver by C2O. Author an OpenAVC Python driver manually per upstream AGENTS.md §3 (https://github.com/open-avc/openavc-drivers/blob/main/AGENTS.md#3-python-driver-api).',
+    'source': '<fixture>',
+  })
+# ---

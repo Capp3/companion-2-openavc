@@ -1,0 +1,16 @@
+{
+  "id": "declined_udp",
+  "name": "declined-udp",
+  "shortname": "Declined UDP",
+  "description": "Minimal fixture that triggers transport_udp gate blocker",
+  "version": "1.0.0",
+  "license": "MIT",
+  "manufacturer": "C2O Test",
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  },
+  "keywords": ["test", "udp"]
+}

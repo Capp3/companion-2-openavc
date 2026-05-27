@@ -29,6 +29,7 @@ Repository = "https://github.com/Capp3/companion-2-openavc"
 dev = [
   "ruff",
   "isort",
+  "black",
   "mypy",
   "pytest",
   "pytest-cov",
@@ -62,6 +63,11 @@ profile = "black"
 line_length = 100
 src_paths = ["c2o", "tests"]
 skip_glob = ["c2o/vendored/*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = "/(\\.venv|c2o/vendored)/"
 
 [tool.mypy]
 python_version = "3.12"
