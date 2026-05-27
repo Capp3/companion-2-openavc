@@ -1,0 +1,91 @@
+# SUPERSEDED: historical scratchpad only. Source of truth is upstream
+# open-avc/openavc-drivers/AGENTS.md — see docs/field-reference.md.
+#
+# =============================================================================
+# C2O DRIVER BREAKDOWN — Field Mapping Reference
+# =============================================================================
+#
+# PURPOSE
+#   This file documents how each field in an OpenAVC .avcdriver is sourced
+#   when converting a Bitfocus Companion module. Values in <> are mapping
+#   descriptors, not literal output — the extractor resolves them at runtime.
+#
+# INPUT MODEL
+#   C2O accepts any of the following as <source>:
+#     Local path   →  ./path/to/companion-module-<id>
+#     GitHub URL   →  https://github.com/bitfocus/companion-module-<id>
+#     Bare ID      →  <id>   expands to the GitHub URL above automatically
+#                     (repo cloned to a temp directory, cleaned up after)
+#
+#   All file references below (manifest.json, index.js, companion/HELP.md, etc.)
+#   are relative paths inside the resolved module root, regardless of input form.
+#
+# MODULE REGISTRY
+#   All official Companion modules live at: https://github.com/orgs/bitfocus/repositories
+#   Module repos follow the naming convention: companion-module-<id>
+#
+# =============================================================================
+
+id: <manifest.json → .id>
+name: <manifest.json → .name>
+manufacturer: <manifest.json → .manufacturer>
+category: <User Prompt — no manifest field; surface manifest.json → .keywords[] as suggestions>
+version: <manifest.json → .version  (user may override; default 0.0.1 if absent)>
+author: <manifest.json → .maintainers[0].name  (fallback: "C2O" if absent)>
+description: <manifest.json → .description>
+transport: <index.js imports — detect helper class: TCPHelper→tcp | UDPHelper→udp | SerialPort→serial | fetch/axios→http>
+delimiter: <index.js on('data') handler — scan receiveBuffer split: indexOf('\n')→"\n" | indexOf('\r\n')→"\r\n" | regex split→pattern>
+
+help:
+  overview: >
+    <companion/HELP.md: first paragraph before first "## Version" heading>
+  setup: >
+    <companion/HELP.md: remaining paragraphs before first "## Version" heading>
+
+default_config:
+  host: ""
+  port: 23
+  poll_interval: 15
+
+config_schema:
+  host:
+    type: string
+    required: true
+    label: IP Address
+  port:
+    type: integer
+    default: 23
+    label: Port
+  poll_interval:
+    type: integer
+    default: 15
+    min: 0
+    label: Poll Interval (sec)
+
+state_variables:
+  input:
+    type: integer
+    label: Current Input
+  volume:
+    type: integer
+    label: Volume
+  mute:
+    type: boolean
+    label: Mute
+
+commands:
+  set_input:
+    label: Set Input
+    send: "{input}!\r\n"
+    params:
+      input: { type: integer, required: true }
+
+polling:
+  interval: 15
+  queries:
+    - "!\r\n"
+    - "V\r\n"
+
+responses:
+  - match: 'In(\d+) All'
+    set: { input: "$1" }

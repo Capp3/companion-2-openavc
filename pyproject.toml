@@ -1,0 +1,78 @@
+[build-system]
+requires = ["uv_build >= 0.11.7, <0.12.0"]
+build-backend = "uv_build"
+
+[project]
+name = "c2o"
+version = "0.0.0"
+authors = [{ name = "Cappy" }]
+description = "Convert Bitfocus Companion modules into OpenAVC .avcdriver YAML drivers"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+  "typer>=0.15",
+  "tree-sitter>=0.24",
+  "tree-sitter-javascript>=0.23",
+  "pydantic>=2.10",
+  "pyyaml>=6.0",
+  "httpx>=0.28",
+]
+
+[project.scripts]
+c2o = "c2o.cli:app"
+
+[project.urls]
+Repository = "https://github.com/Capp3/companion-2-openavc"
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "isort",
+  "mypy",
+  "pytest",
+  "pytest-cov",
+  "hypothesis",
+  "syrupy",
+]
+docs = [
+  "mkdocs",
+  "mkdocs-bootswatch",
+  "pymdown-extensions",
+]
+
+[tool.uv.build-backend]
+module-name = "c2o"
+module-root = ""
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["c2o", "tests"]
+extend-exclude = ["c2o/vendored"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["c2o"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+src_paths = ["c2o", "tests"]
+skip_glob = ["c2o/vendored/*"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["c2o"]
+exclude = ["c2o/vendored/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["c2o"]
+omit = ["c2o/vendored/*"]

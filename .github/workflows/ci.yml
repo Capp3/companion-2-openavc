@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: isort
+        run: uv run isort --check .
+
+      - name: mypy
+        run: uv run mypy c2o
+
+      - name: pytest
+        run: uv run pytest --cov=c2o --cov-fail-under=0
+
+      - name: Build package
+        run: uv build
+
+      - name: Verify vendored build_index.py
+        run: uv run python c2o/vendored/openavc_drivers/scripts/build_index.py --help

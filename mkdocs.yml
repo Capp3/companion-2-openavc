@@ -1,0 +1,53 @@
+# =============================================================================
+# MkDocs Configuration — Companion-2-OpenAVC
+# =============================================================================
+
+site_name: Companion-2-OpenAVC
+site_description: Convert Bitfocus Companion modules into OpenAVC .avcdriver YAML definitions
+site_author: Cappy
+
+repo_url: https://github.com/Capp3/companion-2-openavc
+repo_name: Capp3/companion-2-openavc
+
+theme:
+  name: flatly
+
+plugins:
+  - search
+
+markdown_extensions:
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - tables
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - User Guide: user-guide.md
+  - Contributor Guide: contributor-guide.md
+  - Field Reference: field-reference.md
+
+copyright: Copyright &copy; 2026 Cappy

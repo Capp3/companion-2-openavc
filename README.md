@@ -1,143 +1,94 @@
 # Companion-2-OpenAVC (C2O)
 
-Convert **Bitfocus Companion** modules into **OpenAVC** `.avcdriver` driver definitions.
+Convert **Bitfocus Companion** modules into **OpenAVC** `.avcdriver` YAML driver definitions.
 
 ## Status
 
-This repository is currently in **design / pre-implementation**. The files here (especially [`avcdriverbreakdown.avcdriver`](avcdriverbreakdown.avcdriver)) describe the intended output shape and the mapping from a Companion module to an OpenAVC driver.
+**M0 bootstrap complete.** The Typer CLI is wired with stub subcommands; extractors and conversion logic land in milestones M1–M24.
+
+C2O emits **YAML only**. When a module is too complex for declarative YAML (UDP, binary framing, custom auth, etc.), C2O **declines** and writes a `.declined.json` report (exit code 2).
 
 ## What & why
 
-Bitfocus Companion modules are typically **imperative Node.js code** (actions with callbacks that build protocol strings, TCP/UDP helpers, response parsing, polling loops).
+Bitfocus Companion modules are imperative Node.js packages. OpenAVC drivers are declarative YAML interpreted at runtime. C2O lifts the intent of a Companion module — metadata, config schema, commands, response parsing, polling — into a structured driver file without executing the source module.
 
-OpenAVC drivers are intended to be **declarative**: metadata, config schema, commands, response matchers, and polling defined as structured data (YAML-style).
+## Source of truth
 
-The goal of C2O is to **lift** the “what” from a Companion module into an OpenAVC driver so that:
+The canonical OpenAVC driver spec is upstream:
 
-- the same device definition can be reused outside Companion
-- driver behaviour can be reasoned about and tested as data
-- drivers can be generated/maintained consistently from existing Companion ecosystems
+- **[open-avc/openavc-drivers/AGENTS.md](https://github.com/open-avc/openavc-drivers/blob/main/AGENTS.md)** — schema, enums, validation rules
+- **[scripts/build_index.py](https://github.com/open-avc/openavc-drivers/blob/main/scripts/build_index.py)** — authoritative validator (vendored in this repo)
 
-## How it works (intended)
+The historical scratchpad [`docs/legacy/avcdriverbreakdown.avcdriver`](docs/legacy/avcdriverbreakdown.avcdriver) predates upstream discovery and is **superseded** by AGENTS.md.
+
+Detailed mapping rules: [`memory-bank/projectbrief.md`](memory-bank/projectbrief.md) section 15.
+
+## How it works
 
 ```mermaid
 flowchart LR
-  companionModule[CompanionModule\n(manifest+js)] --> c2o[C2OConverter\n(parser+extractors)]
-  c2o --> avc[OpenAVCDriver\n(.avcdriver)]
+  companionModule[CompanionModule] --> c2o[C2O CLI]
+  c2o -->|eligible| avc[".avcdriver YAML"]
+  c2o -->|declined| decline[".declined.json"]
 ```
 
-## Concept mapping: Companion → `.avcdriver`
-
-The best “current spec” for the target output is the top of [`avcdriverbreakdown.avcdriver`](avcdriverbreakdown.avcdriver). It’s a breakdown file that uses placeholders like `<path:json_pointer>` to show where values should come from.
-
-Using the included example module at [`example/companion-module-bmd-webpresenter/`](example/companion-module-bmd-webpresenter/), here’s the intended mapping:
-
-- **Driver metadata**
-  - **Source**: [`example/companion-module-bmd-webpresenter/companion/manifest.json`](example/companion-module-bmd-webpresenter/companion/manifest.json)
-  - **Target**: `id`, `name`, `manufacturer`, `description`, `version`
-
-- **Category / author (prompted)**
-  - **Source**: user input (there isn’t a canonical field in Companion’s manifest for all of these)
-  - **Target**: `category`, `author` (and optionally `version` if you want to override the manifest)
-
-- **Transport / delimiter**
-  - **Source**: module runtime code, e.g. [`example/companion-module-bmd-webpresenter/index.js`](example/companion-module-bmd-webpresenter/index.js)
-    - transport inference example: `TCPHelper(...)` suggests TCP
-    - delimiter inference example: buffering and splitting on `\n` suggests newline-delimited messages
-  - **Target**: `transport`, `delimiter` (exact OpenAVC fields pending final spec)
-
-- **Configuration schema**
-  - **Source**: `getConfigFields()` in `index.js` (Companion UI fields like `host`, `port`)
-  - **Target**:
-    - `default_config` (defaults for the driver)
-    - `config_schema` (type/required/labels/min/etc.)
-
-- **State variables**
-  - **Source**: `setVariableDefinitions(...)` in [`example/companion-module-bmd-webpresenter/variables.js`](example/companion-module-bmd-webpresenter/variables.js)
-  - **Target**: `state_variables` (typed, labelled variables that OpenAVC can expose)
-
-- **Commands (actions)**
-  - **Source**: `setActionDefinitions(...)` in [`example/companion-module-bmd-webpresenter/actions.js`](example/companion-module-bmd-webpresenter/actions.js)
-    - actions often build strings like `cmd = 'STREAM STATE:\\nAction: ' + ... + '\\n\\n'`
-  - **Target**: `commands`
-    - `send` templates (string templates with parameters)
-    - `params` (typed parameters with help)
-
-- **Responses (parsing)**
-  - **Source**: socket parsing / regex matching in the module, typically in `index.js` (`on('data')`, `on('receiveline')`, regexes, object extraction)
-  - **Target**: `responses`
-    - `match`: regex pattern
-    - `set`: variable assignments (capture groups → state variables)
-
-- **Polling**
-  - **Source**: recurring timers like `setInterval(...dataPoller...)` and whatever command strings are sent
-  - **Target**: `polling.interval` and `polling.queries`
-
-## Planned CLI
-
-The initial interface is intended to be a CLI. Proposed shape (subject to change as the implementation lands):
+## CLI
 
 ```bash
-# Convert a Companion module to an OpenAVC driver file
-c2o convert ./path/to/companion-module -o driver.avcdriver
-
-# Prompt for fields that aren't safely inferrable (category/author/etc.)
-c2o convert ./path/to/companion-module -o driver.avcdriver --interactive
-
-# Dry-run: show what the converter thinks it can extract
-c2o inspect ./path/to/companion-module
+uv sync --all-extras
+uv run c2o --help
 ```
 
-## Try the included reference example (input fixture)
+Subcommands: `convert`, `inspect`, `validate`, `version` (stubs until later milestones).
 
-- **Example module**: [`example/companion-module-bmd-webpresenter/`](example/companion-module-bmd-webpresenter/)
-- **Target output breakdown**: [`avcdriverbreakdown.avcdriver`](avcdriverbreakdown.avcdriver)
+```bash
+c2o convert ./companion-module-bmd-webpresenter -o out.avcdriver
+c2o inspect bmd-webpresenter
+c2o validate ./driver.avcdriver
+c2o version
+```
 
-This example is useful because it covers a common pattern: TCP transport, newline-delimited responses, commands as string templates, and polling.
+## Development
 
-## Open design questions (tracked in `avcdriverbreakdown.avcdriver`)
+Requirements: Python **>= 3.12**, [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-These are explicitly called out as placeholders near the top of [`avcdriverbreakdown.avcdriver`](avcdriverbreakdown.avcdriver) and still need decisions:
+```bash
+uv sync --all-extras
+uv run c2o --help
+uv run pytest
+uv run ruff check .
+uv run mypy c2o
+uv build
+make update-upstream    # refresh vendored openavc-drivers snapshot
+uv run mkdocs serve     # docs preview
+```
 
-- **`transport`**: how reliably can we infer TCP vs UDP vs HTTP vs IPC from module code across the ecosystem?
-- **`delimiter`**: should this be a fixed delimiter (like `\n`) or a regex splitter, and how do we express multi-line message blocks?
-- **`help.overview` / `help.setup`**: should these be pulled from the module’s `README`/`HELP.md` (when present) or always prompted for?
-- **Coverage**: how do we represent Companion concepts that don’t map cleanly (feedbacks, presets) in the first version?
+See [`AGENTS.md`](AGENTS.md) for agent-oriented guidance.
 
-## Repository layout (current)
+## Reference example
 
-```sh
+[`example/companion-module-bmd-webpresenter/`](example/companion-module-bmd-webpresenter/) — TCP module with newline-delimited responses, string-template commands, and polling. Used as a real-world fixture from M3 onward.
+
+## Repository layout
+
+```text
 .
-├─ avcdriverbreakdown.avcdriver        # Target output breakdown/spec template
-├─ example/
-│  └─ companion-module-bmd-webpresenter/  # Reference Companion module fixture
-├─ docs/                               # MkDocs content (currently a stub)
-└─ README.md
+├── c2o/                    # Python package (CLI + extractors)
+│   └── vendored/           # pinned openavc-drivers snapshot
+├── docs/                   # MkDocs site
+├── example/                # reference Companion module (→ tests/fixtures in M1)
+├── memory-bank/            # project brief and task tracking
+├── tests/                  # pytest suite
+├── AGENTS.md
+├── pyproject.toml
+└── README.md
 ```
-
-## Roadmap (high-level)
-
-- **Manifest extraction**: read `manifest.json` → driver metadata
-- **Config schema extraction**: read `getConfigFields()` → config schema + defaults
-- **Action extraction**: convert `setActionDefinitions()` into `commands` with parameters and `send` templates
-- **Response extraction**: extract regex/line parsing into `responses`
-- **Transport + delimiter inference**: implement heuristics for common patterns (`TCPHelper`, newline framing, etc.)
-- **Interactive prompts**: for `category`, `author`, and any non-inferrable fields
-- **Validation**: ensure output matches the required `.avcdriver` schema and aligns with the breakdown template
 
 ## Resources
 
-### OpenAVC
-
-- `https://docs.openavc.com/`
-- `https://github.com/open-avc/openavc`
-
-### Companion
-
-- `https://bitfocus.io/companion`
-- `https://github.com/bitfocus/companion`
-- `https://companion.free/`
+- OpenAVC: [docs.openavc.com](https://docs.openavc.com/) · [github.com/open-avc/openavc](https://github.com/open-avc/openavc)
+- Companion: [bitfocus.io/companion](https://bitfocus.io/companion) · [github.com/bitfocus/companion](https://github.com/bitfocus/companion)
 
 ## License
 
-MIT (see [`LICENCE`](LICENCE)).
+MIT — see [`LICENSE`](LICENSE).

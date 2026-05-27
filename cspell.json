@@ -1,0 +1,35 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "avcdriver",
+    "Bitfocus",
+    "bootswatch",
+    "httpx",
+    "hypothesis",
+    "mkdocs",
+    "openavc",
+    "OpenAVC",
+    "pyproject",
+    "pydantic",
+    "subcommand",
+    "syrupy",
+    "typer",
+    "vendored",
+    "webpresenter"
+  ],
+  "ignorePaths": [
+    "c2o/vendored/**",
+    "example/**",
+    ".venv/**",
+    "site/**",
+    "dist/**"
+  ],
+  "ignoreWords": [
+    "Bitfocus",
+    "Capp",
+    "Cappy",
+    "avcdriverbreakdown",
+    "receiveline"
+  ]
+}
