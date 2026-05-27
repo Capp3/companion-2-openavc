@@ -67,7 +67,7 @@ See [`AGENTS.md`](AGENTS.md) for agent-oriented guidance.
 
 ## Reference example
 
-[`example/companion-module-bmd-webpresenter/`](example/companion-module-bmd-webpresenter/) — TCP module with newline-delimited responses, string-template commands, and polling. Used as a real-world fixture from M3 onward.
+[`tests/fixtures/external/bmd-webpresenter/`](tests/fixtures/external/bmd-webpresenter/) — TCP module with newline-delimited responses, string-template commands, and polling. Used as a real-world fixture from M3 onward.
 
 ## Repository layout
 
@@ -76,9 +76,8 @@ See [`AGENTS.md`](AGENTS.md) for agent-oriented guidance.
 ├── c2o/                    # Python package (CLI + extractors)
 │   └── vendored/           # pinned openavc-drivers snapshot
 ├── docs/                   # MkDocs site
-├── example/                # reference Companion module (→ tests/fixtures in M1)
-├── memory-bank/            # project brief and task tracking
-├── tests/                  # pytest suite
+├── tests/                  # pytest suite + fixtures
+│   └── fixtures/external/  # real-world Companion modules (e.g. bmd-webpresenter)
 ├── AGENTS.md
 ├── pyproject.toml
 └── README.md

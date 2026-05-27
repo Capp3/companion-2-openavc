@@ -1,0 +1,18 @@
+{
+  "id": "dummy_device",
+  "name": "dummy-device",
+  "shortname": "Dummy Device",
+  "description": "Purpose-built C2O test module covering every extractor surface",
+  "version": "1.0.0",
+  "license": "MIT",
+  "manufacturer": "C2O Test Labs",
+  "maintainers": [{ "name": "C2O Fixture Bot" }],
+  "products": ["Dummy Model A"],
+  "keywords": ["test", "tcp", "fixture"],
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  }
+}

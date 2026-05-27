@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+.nova/
+.DS_Store
+/pkg
+/pkg.tgz

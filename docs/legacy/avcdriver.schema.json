@@ -1,0 +1,1136 @@
+{
+  "$comment": "Read-only upstream mirror. C2O validation uses vendored build_index.py, not this file (brief section 13.3).",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/open-avc/openavc-drivers/main/schemas/avcdriver.schema.json",
+  "title": "OpenAVC Driver (.avcdriver)",
+  "description": "Schema for OpenAVC YAML driver definition files (.avcdriver). See AGENTS.md for full documentation.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "transport"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique driver ID. Lowercase + underscores only. Must match filename (without extension).",
+      "examples": [
+        "extron_sis",
+        "biamp_tesira_ttp"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name."
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "tcp",
+        "serial",
+        "http",
+        "udp",
+        "osc"
+      ]
+    },
+    "manufacturer": {
+      "type": "string",
+      "default": "Generic",
+      "description": "Must appear in manufacturers.json."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "projector",
+        "display",
+        "switcher",
+        "scaler",
+        "audio",
+        "camera",
+        "lighting",
+        "relay",
+        "utility",
+        "video",
+        "streaming",
+        "power",
+        "other"
+      ],
+      "default": "utility"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "author": {
+      "type": "string",
+      "default": "Community"
+    },
+    "description": {
+      "type": "string",
+      "default": ""
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the protocol document. Required for index.json."
+    },
+    "delimiter": {
+      "type": "string",
+      "default": "\\r",
+      "description": "TCP/serial message delimiter. Supports \\r, \\n, \\r\\n."
+    },
+    "protocols": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      }
+    },
+    "simulated": {
+      "type": "boolean",
+      "default": false
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Only OpenAVC maintainers set this true."
+    },
+    "deprecated": {
+      "type": "boolean",
+      "default": false
+    },
+    "replacement_id": {
+      "type": "string"
+    },
+    "min_platform_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      }
+    },
+    "help": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overview": {
+          "type": "string"
+        },
+        "setup": {
+          "type": "string"
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Network discovery hints and fingerprints (AGENTS.md \u00a72.2).",
+      "properties": {
+        "mdns": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "service"
+                    ],
+                    "properties": {
+                      "service": {
+                        "type": "string"
+                      },
+                      "txt": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "ssdp": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "amx_ddp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "make": {
+              "type": "string"
+            },
+            "model_pattern": {
+              "type": "string",
+              "default": "*"
+            }
+          }
+        },
+        "tcp_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "port"
+          ],
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "send_ascii": {
+              "type": "string"
+            },
+            "send_hex": {
+              "type": "string"
+            },
+            "expect": {
+              "type": "string"
+            },
+            "expect_regex": {
+              "type": "string"
+            },
+            "expect_hex": {
+              "type": "string"
+            },
+            "cross_vendor": {
+              "type": "boolean",
+              "default": false
+            },
+            "extract_manufacturer": {
+              "type": "string"
+            },
+            "extract": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "regex": {
+                    "type": "string"
+                  },
+                  "group": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 3000
+            }
+          }
+        },
+        "udp_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "port"
+          ],
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "send_ascii": {
+              "type": "string"
+            },
+            "send_hex": {
+              "type": "string"
+            },
+            "expect": {
+              "type": "string"
+            },
+            "expect_regex": {
+              "type": "string"
+            },
+            "expect_hex": {
+              "type": "string"
+            },
+            "cross_vendor": {
+              "type": "boolean",
+              "default": false
+            },
+            "extract_manufacturer": {
+              "type": "string"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 3000
+            }
+          }
+        },
+        "python": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file"
+          ],
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "cross_vendor": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "oui": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}$"
+          }
+        },
+        "hostname": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "port_open": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "not": {
+              "enum": [
+                22,
+                80,
+                443,
+                8000,
+                8080,
+                8443,
+                8888
+              ]
+            }
+          },
+          "description": "Vendor-specific ports only \u2014 generic ports rejected at validation."
+        },
+        "manufacturer_alias": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "snmp_pen": {
+          "type": "integer"
+        }
+      }
+    },
+    "default_config": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Default connection settings. Poll cadence lives here (poll_interval) \u2014 NOT in polling.interval.",
+      "properties": {
+        "host": {
+          "type": "string",
+          "default": ""
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "poll_interval": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Seconds between polls. 0 disables polling."
+        },
+        "inter_command_delay": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.1
+        },
+        "baudrate": {
+          "type": "integer",
+          "default": 9600
+        },
+        "parity": {
+          "type": "string",
+          "enum": [
+            "N",
+            "E",
+            "O"
+          ],
+          "default": "N"
+        },
+        "bytesize": {
+          "type": "integer",
+          "enum": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "default": 8
+        },
+        "stopbits": {
+          "type": "number",
+          "enum": [
+            1,
+            1.5,
+            2
+          ],
+          "default": 1
+        },
+        "ssl": {
+          "type": "boolean",
+          "default": false
+        },
+        "verify_ssl": {
+          "type": "boolean",
+          "default": false
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": [
+            "none",
+            "basic",
+            "digest",
+            "bearer",
+            "api_key"
+          ],
+          "default": "none"
+        },
+        "username": {
+          "type": "string",
+          "default": ""
+        },
+        "password": {
+          "type": "string",
+          "default": ""
+        },
+        "token": {
+          "type": "string",
+          "default": ""
+        },
+        "api_key": {
+          "type": "string",
+          "default": ""
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0,
+          "default": 10.0
+        }
+      }
+    },
+    "config_schema": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/configField"
+      },
+      "description": "Fields shown in the Add Device dialog."
+    },
+    "state_variables": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/stateVariable"
+      },
+      "description": "Device state exposed as device.<device_id>.<key>."
+    },
+    "child_entity_types": {
+      "type": "object",
+      "description": "Sub-unit types for devices with many addressable children (\u00a72.5.1).",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "label",
+          "id_format",
+          "state_variables"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "label_plural": {
+            "type": "string"
+          },
+          "id_format": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "integer"
+                ]
+              },
+              "min": {
+                "type": "integer",
+                "default": 1
+              },
+              "max": {
+                "type": "integer"
+              },
+              "pad_width": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "state_variables": {
+            "type": "object",
+            "additionalProperties": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/stateVariable"
+                },
+                {
+                  "properties": {
+                    "cloud_priority": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "low"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "summary_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "label_field": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/command"
+      },
+      "description": "Actions the driver can send. Keys are command names."
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/responsePattern"
+      },
+      "description": "Incoming message parsers. First match wins \u2014 order most-specific first."
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "description": "Telnet-style login handshake (\u00a72.8). Runs after connect, before on_connect.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "telnet_login"
+          ]
+        },
+        "username_prompt": {
+          "type": "string",
+          "default": "login: "
+        },
+        "password_prompt": {
+          "type": "string",
+          "default": "Password: "
+        },
+        "success_pattern": {
+          "type": "string"
+        },
+        "failure_pattern": {
+          "type": "string"
+        },
+        "username_field": {
+          "type": "string",
+          "default": "username"
+        },
+        "password_field": {
+          "type": "string",
+          "default": "password"
+        },
+        "skip_if_empty": {
+          "type": "boolean",
+          "default": true
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "default": 10
+        },
+        "line_ending": {
+          "type": "string",
+          "default": "\\r\\n"
+        }
+      }
+    },
+    "on_connect": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Raw strings sent after connect (and after auth). Use to enable push/verbose mode."
+    },
+    "polling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queries"
+      ],
+      "description": "Periodic queries. Cadence controlled by default_config.poll_interval \u2014 do NOT add polling.interval.",
+      "properties": {
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "TCP/serial: raw strings. HTTP: command names or URL paths."
+        }
+      }
+    },
+    "device_settings": {
+      "type": "object",
+      "description": "Writable device hardware settings (\u00a72.11).",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "state_key"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "integer",
+              "number",
+              "float",
+              "boolean",
+              "enum"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "help": {
+            "type": "string"
+          },
+          "default": {},
+          "state_key": {
+            "type": "string"
+          },
+          "setup": {
+            "type": "boolean",
+            "default": false
+          },
+          "unique": {
+            "type": "boolean",
+            "default": false
+          },
+          "regex": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array"
+          },
+          "write": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "send": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "DELETE",
+                  "PATCH"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "frame_parser": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "description": "Binary protocol framing (\u00a72.12). Overrides delimiter.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "length_prefix"
+            },
+            "header_size": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                4
+              ]
+            },
+            "header_offset": {
+              "type": "integer",
+              "default": 0
+            },
+            "include_header": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "fixed_length"
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "simulator": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Built-in simulator (\u00a75.1). Python drivers use a _sim.py file instead.",
+      "properties": {
+        "initial_state": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "select",
+                  "slider",
+                  "toggle",
+                  "button"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array"
+              }
+            }
+          }
+        },
+        "command_handlers": {
+          "type": "array",
+          "description": "match+respond/set_state (explicit) tried first; match+handler (Python inline) second.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "receive": {
+                "type": "string"
+              },
+              "match": {
+                "type": "string",
+                "description": "Anchored as ^pattern$. End HTTP patterns with .* to consume trailing body."
+              },
+              "set_state": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "respond": {
+                "type": "string"
+              },
+              "handler": {
+                "type": "string",
+                "description": "Inline Python. Locals: match, state (dict), respond(str)."
+              }
+            }
+          }
+        },
+        "error_modes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "behavior": {
+                "type": "string",
+                "enum": [
+                  "no_response",
+                  "corrupt_response"
+                ]
+              },
+              "set_state": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "compatible_models": {
+      "type": "array",
+      "description": "Models this driver supports. Feeds devices.json for Browse Drivers search (\u00a77).",
+      "items": {
+        "type": "object",
+        "required": [
+          "manufacturer",
+          "models",
+          "confidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "manufacturer": {
+            "type": "string"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "full",
+              "partial",
+              "untested"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "configField": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "text",
+            "integer",
+            "number",
+            "boolean",
+            "enum",
+            "object"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "default": {},
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secret": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "stateVariable": {
+      "type": "object",
+      "required": [
+        "type",
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "float",
+            "boolean",
+            "enum"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {},
+          "description": "Required for enum. Flat primitives only (str/int/float/bool/null)."
+        }
+      }
+    },
+    "commandParam": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "boolean",
+            "enum"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "default": {},
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "child_type": {
+          "type": "string",
+          "description": "Child entity type this param targets."
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/commandParam"
+          }
+        },
+        "send": {
+          "type": "string",
+          "description": "TCP/serial raw string. {param} substituted. Python format specs supported e.g. {level:03d}."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+          ],
+          "default": "GET"
+        },
+        "path": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "query_params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "address": {
+          "type": "string",
+          "description": "OSC address path."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "int",
+                  "float",
+                  "string",
+                  "bool"
+                ]
+              },
+              "value": {}
+            }
+          }
+        }
+      }
+    },
+    "responsePattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "match": {
+          "type": "string",
+          "description": "Regex matched per line. Capture groups referenced as $1, $2 in set/mappings."
+        },
+        "set": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "group",
+              "state",
+              "map"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "type": "integer"
+              },
+              "state": {
+                "type": "string"
+              },
+              "map": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "json_path": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
