@@ -1,0 +1,301 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_state_variables_golden
+  dict({
+    'review': list([
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'model',
+        }),
+        'field': 'state_variables.model',
+        'message': "Type for state variable 'model' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'label',
+        }),
+        'field': 'state_variables.label',
+        'message': "Type for state variable 'label' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'software',
+        }),
+        'field': 'state_variables.software',
+        'message': "Type for state variable 'software' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'video_mode',
+        }),
+        'field': 'state_variables.video_mode',
+        'message': "Type for state variable 'video_mode' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'platform',
+        }),
+        'field': 'state_variables.platform',
+        'message': "Type for state variable 'platform' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'server',
+        }),
+        'field': 'state_variables.server',
+        'message': "Type for state variable 'server' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'key',
+        }),
+        'field': 'state_variables.key',
+        'message': "Type for state variable 'key' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'quality',
+        }),
+        'field': 'state_variables.quality',
+        'message': "Type for state variable 'quality' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'stream_state',
+        }),
+        'field': 'state_variables.stream_state',
+        'message': "Type for state variable 'stream_state' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'stream_duration',
+        }),
+        'field': 'state_variables.stream_duration',
+        'message': "Type for state variable 'stream_duration' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'string',
+          'variable_id': 'stream_duration_HH',
+        }),
+        'field': 'state_variables.stream_duration_HH',
+        'message': "Type for state variable 'stream_duration_HH' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'string',
+          'variable_id': 'stream_duration_MM',
+        }),
+        'field': 'state_variables.stream_duration_MM',
+        'message': "Type for state variable 'stream_duration_MM' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'string',
+          'variable_id': 'stream_duration_SS',
+        }),
+        'field': 'state_variables.stream_duration_SS',
+        'message': "Type for state variable 'stream_duration_SS' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'stream_bitrate',
+        }),
+        'field': 'state_variables.stream_bitrate',
+        'message': "Type for state variable 'stream_bitrate' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'cache',
+        }),
+        'field': 'state_variables.cache',
+        'message': "Type for state variable 'cache' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'passphrase',
+        }),
+        'field': 'state_variables.passphrase',
+        'message': "Type for state variable 'passphrase' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'fallback',
+          'inferred_type': 'string',
+          'variable_id': 'URL',
+        }),
+        'field': 'state_variables.URL',
+        'message': "Type for state variable 'URL' was inferred as 'string'.",
+      }),
+    ]),
+    'state_variables': dict({
+      'state_variables': dict({
+        'URL': dict({
+          'label': 'Current URL',
+          'type': 'string',
+        }),
+        'cache': dict({
+          'label': 'Cache Used',
+          'type': 'string',
+        }),
+        'key': dict({
+          'label': 'Stream Key',
+          'type': 'string',
+        }),
+        'label': dict({
+          'label': 'Device Label',
+          'type': 'string',
+        }),
+        'model': dict({
+          'label': 'Device Model',
+          'type': 'string',
+        }),
+        'passphrase': dict({
+          'label': 'Passphrase',
+          'type': 'string',
+        }),
+        'platform': dict({
+          'label': 'Platform',
+          'type': 'string',
+        }),
+        'quality': dict({
+          'label': 'Stream Quality',
+          'type': 'string',
+        }),
+        'server': dict({
+          'label': 'Server',
+          'type': 'string',
+        }),
+        'software': dict({
+          'label': 'Device Software',
+          'type': 'string',
+        }),
+        'stream_bitrate': dict({
+          'label': 'Stream Bitrate',
+          'type': 'string',
+        }),
+        'stream_duration': dict({
+          'label': 'Streaming Duration',
+          'type': 'string',
+        }),
+        'stream_duration_HH': dict({
+          'label': 'Streaming Duration (Hours)',
+          'type': 'string',
+        }),
+        'stream_duration_MM': dict({
+          'label': 'Streaming Duration (Minutes)',
+          'type': 'string',
+        }),
+        'stream_duration_SS': dict({
+          'label': 'Streaming Duration (Seconds)',
+          'type': 'string',
+        }),
+        'stream_state': dict({
+          'label': 'Streaming State',
+          'type': 'string',
+        }),
+        'video_mode': dict({
+          'label': 'Video Mode',
+          'type': 'string',
+        }),
+      }),
+    }),
+  })
+# ---
+# name: test_dummy_state_variables_golden
+  dict({
+    'review': list([
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'string',
+          'variable_id': 'device_label',
+        }),
+        'field': 'state_variables.device_label',
+        'message': "Type for state variable 'device_label' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'integer',
+          'variable_id': 'input_level',
+        }),
+        'field': 'state_variables.input_level',
+        'message': "Type for state variable 'input_level' was inferred as 'integer'.",
+      }),
+      dict({
+        'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'boolean',
+          'variable_id': 'mute_state',
+        }),
+        'field': 'state_variables.mute_state',
+        'message': "Type for state variable 'mute_state' was inferred as 'boolean'.",
+      }),
+    ]),
+    'state_variables': dict({
+      'state_variables': dict({
+        'device_label': dict({
+          'label': 'Device Label',
+          'type': 'string',
+        }),
+        'input_level': dict({
+          'label': 'Input Level',
+          'type': 'integer',
+        }),
+        'mute_state': dict({
+          'label': 'Mute State',
+          'type': 'boolean',
+        }),
+      }),
+    }),
+  })
+# ---

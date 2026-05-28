@@ -5,10 +5,11 @@
   "description": "Purpose-built C2O test module covering every extractor surface",
   "version": "1.0.0",
   "license": "MIT",
-  "manufacturer": "C2O Test Labs",
+  "repository": "git+https://github.com/Capp3/companion-2-openavc.git",
+  "manufacturer": "Generic",
   "maintainers": [{ "name": "C2O Fixture Bot" }],
   "products": ["Dummy Model A"],
-  "keywords": ["test", "tcp", "fixture"],
+  "keywords": ["test", "tcp", "fixture", "utility"],
   "runtime": {
     "type": "node18",
     "api": "nodejs-ipc",

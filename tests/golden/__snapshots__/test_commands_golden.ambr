@@ -1,0 +1,115 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_stream_commands_golden
+  dict({
+    'commands': dict({
+      'commands': dict({
+        'stream_start': dict({
+          'label': 'Streaming Control',
+          'params': dict({
+          }),
+          'send': '''
+            STREAM STATE:
+            Action: Start
+            
+  
+          ''',
+        }),
+        'stream_stop': dict({
+          'label': 'Streaming Control',
+          'params': dict({
+          }),
+          'send': '''
+            STREAM STATE:
+            Action: Stop
+            
+  
+          ''',
+        }),
+      }),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.STATE_DEPENDENT_BRANCH: 'state_dependent_branch'>,
+        'details': dict({
+          'action_key': 'stream',
+          'reason': 'toggle_branch',
+        }),
+        'field': 'commands.stream',
+        'message': "Action 'stream' contains runtime-state branching that cannot be expressed in YAML.",
+      }),
+    ]),
+  })
+# ---
+# name: test_dummy_commands_golden
+  dict({
+    'commands': dict({
+      'commands': dict({
+        'configure': dict({
+          'label': 'Configure',
+          'params': dict({
+            'label': dict({
+              'label': 'Label',
+              'type': 'string',
+            }),
+            'mode': dict({
+              'label': 'Mode',
+              'type': 'enum',
+              'values': tuple(
+                'auto',
+                'manual',
+              ),
+            }),
+          }),
+          'send': '''
+            CFG {mode} {label}
+  
+          ''',
+        }),
+        'set_input': dict({
+          'label': 'Set Input',
+          'params': dict({
+            'input': dict({
+              'label': 'Input',
+              'max': 8,
+              'min': 1,
+              'type': 'integer',
+            }),
+          }),
+          'send': '''
+            SET INPUT {input}
+  
+          ''',
+        }),
+        'stream_start': dict({
+          'label': 'Stream',
+          'params': dict({
+          }),
+          'send': '''
+            STREAM START
+  
+          ''',
+        }),
+        'stream_stop': dict({
+          'label': 'Stream',
+          'params': dict({
+          }),
+          'send': '''
+            STREAM STOP
+  
+          ''',
+        }),
+      }),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.STATE_DEPENDENT_BRANCH: 'state_dependent_branch'>,
+        'details': dict({
+          'action_key': 'toggle_mute',
+          'reason': 'instance_state',
+        }),
+        'field': 'commands.toggle_mute',
+        'message': "Action 'toggle_mute' contains runtime-state branching that cannot be expressed in YAML.",
+      }),
+    ]),
+  })
+# ---

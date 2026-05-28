@@ -47,6 +47,16 @@ class CallMatch:
 
 
 @dataclass(frozen=True)
+class MethodMatch:
+    """A JavaScript class method definition matched in a parsed module."""
+
+    rel_path: str
+    name: str
+    node: Node
+    body: Node | None
+
+
+@dataclass(frozen=True)
 class StringTemplate:
     """A simple string-concat expression represented as a template."""
 
@@ -159,6 +169,284 @@ def find_calls(
                 )
             )
     return hits
+
+
+def find_method_definitions(parsed: ParsedModule, name: str) -> list[MethodMatch]:
+    """Find class method definitions named `name`."""
+    query = _load_query("method_definition")
+    hits: list[MethodMatch] = []
+    for rel, tree in parsed.trees.items():
+        source = parsed.sources[rel]
+        for _, captures in QueryCursor(query).matches(tree.root_node):
+            name_nodes = captures.get("method.name", [])
+            method_nodes = captures.get("method", [])
+            body_nodes = captures.get("method.body", [])
+            if not name_nodes or not method_nodes:
+                continue
+            method_name = node_text(name_nodes[0], source)
+            if method_name != name:
+                continue
+            hits.append(
+                MethodMatch(
+                    rel_path=rel,
+                    name=method_name,
+                    node=method_nodes[0],
+                    body=body_nodes[0] if body_nodes else None,
+                )
+            )
+    return hits
+
+
+def resolve_array_via_pushes(
+    *,
+    source: str,
+    identifier_node: Node,
+    call_node: Node,
+) -> list[Node] | None:
+    """Resolve an identifier referencing an array literal built via `.push()` calls.
+
+    Walks the nearest enclosing function body and returns object-literal nodes
+    pushed onto the identifier. Returns ``None`` when the binding cannot be
+    resolved statically.
+    """
+    if identifier_node.type != "identifier":
+        return None
+
+    identifier = node_text(identifier_node, source)
+    scope_body = _enclosing_function_body(call_node)
+    if scope_body is None:
+        return None
+
+    declarator = _find_empty_array_declarator(
+        scope_body,
+        source,
+        identifier,
+        before_byte=call_node.start_byte,
+    )
+    if declarator is None:
+        return None
+
+    return _collect_push_objects(
+        scope_body,
+        source,
+        identifier,
+        after_byte=declarator.end_byte,
+        before_byte=call_node.start_byte,
+    )
+
+
+def _enclosing_function_body(node: Node) -> Node | None:
+    current: Node | None = node
+    while current is not None:
+        if current.type == "statement_block":
+            parent = current.parent
+            if parent is not None and parent.type in {
+                "function_declaration",
+                "method_definition",
+                "arrow_function",
+                "function_expression",
+                "function",
+            }:
+                return current
+        current = current.parent
+    return None
+
+
+def _find_empty_array_declarator(
+    body: Node,
+    source: str,
+    identifier: str,
+    *,
+    before_byte: int,
+) -> Node | None:
+    found: Node | None = None
+    for node in _walk_nodes(body):
+        if node.type != "variable_declarator":
+            continue
+        if node.start_byte >= before_byte:
+            continue
+        name_node = node.child_by_field_name("name")
+        if name_node is None or node_text(name_node, source) != identifier:
+            continue
+        value = node.child_by_field_name("value")
+        if value is None or value.type != "array" or value.named_child_count != 0:
+            continue
+        if found is None or node.start_byte > found.start_byte:
+            found = node
+    return found
+
+
+def _collect_push_objects(
+    body: Node,
+    source: str,
+    identifier: str,
+    *,
+    after_byte: int,
+    before_byte: int,
+) -> list[Node]:
+    objects: list[Node] = []
+    for node in _walk_nodes(body):
+        if node.type != "call_expression":
+            continue
+        if not (after_byte <= node.start_byte < before_byte):
+            continue
+        function = node.child_by_field_name("function")
+        if function is None or function.type != "member_expression":
+            continue
+        obj = function.child_by_field_name("object")
+        prop = function.child_by_field_name("property")
+        if obj is None or prop is None:
+            continue
+        if node_text(obj, source) != identifier or node_text(prop, source) != "push":
+            continue
+        args = node.child_by_field_name("arguments")
+        if args is None:
+            continue
+        for arg in args.named_children:
+            if arg.type == "object":
+                objects.append(arg)
+    return objects
+
+
+def resolve_object_via_assignments(
+    *,
+    source: str,
+    identifier_node: Node,
+    call_node: Node,
+) -> list[tuple[str, Node]] | None:
+    """Resolve an identifier referencing an object built via property assignments.
+
+    Walks the nearest enclosing function body and returns ``(key, object_node)``
+    pairs assigned onto the identifier before the call. Returns ``None`` when
+    the binding cannot be resolved statically.
+    """
+    if identifier_node.type != "identifier":
+        return None
+
+    identifier = node_text(identifier_node, source)
+    scope_body = _enclosing_function_body(call_node)
+    if scope_body is None:
+        return None
+
+    declarator = _find_empty_object_declarator(
+        scope_body,
+        source,
+        identifier,
+        before_byte=call_node.start_byte,
+    )
+    if declarator is None:
+        return None
+
+    return _collect_object_assignments(
+        scope_body,
+        source,
+        identifier,
+        after_byte=declarator.end_byte,
+        before_byte=call_node.start_byte,
+    )
+
+
+def collect_inline_object_pairs(arg_node: Node, source: str) -> list[tuple[str, Node]]:
+    """Collect ``(key, object_node)`` pairs from an inline object literal argument."""
+    from c2o.parse.literals import pair_key
+
+    if arg_node.type != "object":
+        return []
+
+    pairs: list[tuple[str, Node]] = []
+    for child in arg_node.named_children:
+        if child.type != "pair":
+            continue
+        key = pair_key(child, source)
+        if key is None:
+            continue
+        value = child.child_by_field_name("value")
+        if value is not None and value.type == "object":
+            pairs.append((key, value))
+    return pairs
+
+
+def _find_empty_object_declarator(
+    body: Node,
+    source: str,
+    identifier: str,
+    *,
+    before_byte: int,
+) -> Node | None:
+    found: Node | None = None
+    for node in _walk_nodes(body):
+        if node.type != "variable_declarator":
+            continue
+        if node.start_byte >= before_byte:
+            continue
+        name_node = node.child_by_field_name("name")
+        if name_node is None or node_text(name_node, source) != identifier:
+            continue
+        value = node.child_by_field_name("value")
+        if value is None or value.type != "object" or value.named_child_count != 0:
+            continue
+        if found is None or node.start_byte > found.start_byte:
+            found = node
+    return found
+
+
+def _collect_object_assignments(
+    body: Node,
+    source: str,
+    identifier: str,
+    *,
+    after_byte: int,
+    before_byte: int,
+) -> list[tuple[str, Node]]:
+    pairs: list[tuple[str, Node]] = []
+    for node in _walk_nodes(body):
+        if node.type != "assignment_expression":
+            continue
+        if not (after_byte <= node.start_byte < before_byte):
+            continue
+        left = node.child_by_field_name("left")
+        right = node.child_by_field_name("right")
+        if left is None or right is None or right.type != "object":
+            continue
+        key = _assignment_object_key(left, source, identifier)
+        if key is None:
+            continue
+        pairs.append((key, right))
+    return pairs
+
+
+def _assignment_object_key(left: Node, source: str, identifier: str) -> str | None:
+    if left.type == "subscript_expression":
+        obj = left.child_by_field_name("object")
+        index = left.child_by_field_name("index")
+        if obj is None or index is None:
+            return None
+        if node_text(obj, source) != identifier:
+            return None
+        if index.type == "string":
+            return _decode_js_string(node_text(index, source))
+        return None
+
+    if left.type == "member_expression":
+        obj = left.child_by_field_name("object")
+        prop = left.child_by_field_name("property")
+        if obj is None or prop is None:
+            return None
+        if node_text(obj, source) != identifier:
+            return None
+        return node_text(prop, source)
+
+    return None
+
+
+def _walk_nodes(root: Node) -> list[Node]:
+    nodes: list[Node] = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        nodes.append(node)
+        stack.extend(reversed(node.children))
+    return nodes
 
 
 def extract_string_concat(node: Node, source: str) -> StringTemplate | None:

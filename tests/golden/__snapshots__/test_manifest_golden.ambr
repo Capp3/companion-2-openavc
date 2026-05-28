@@ -1,0 +1,42 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_manifest_golden
+  dict({
+    'manifest': dict({
+      'author': 'Peter Daniel',
+      'category': 'streaming',
+      'description': 'Live stream from any SDI video source direct to YouTube, Facebook, Twitter and more',
+      'id': 'bmd_webpresenter',
+      'manufacturer': 'Blackmagic Design',
+      'name': 'WebPresenter',
+      'source_url': 'https://github.com/bitfocus/companion-module-bmd-webpresenter',
+      'version': '2.1.3',
+    }),
+    'review_flags': tuple(
+      dict({
+        'code': <ReviewCode.ID_COERCED: 'id_coerced'>,
+        'details': dict({
+          'new': 'bmd_webpresenter',
+          'old': 'bmd-webpresenter',
+        }),
+        'field': 'id',
+        'message': "Driver id was coerced from 'bmd-webpresenter' to 'bmd_webpresenter'.",
+      }),
+    ),
+  })
+# ---
+# name: test_dummy_manifest_golden
+  dict({
+    'manifest': dict({
+      'author': 'C2O Fixture Bot',
+      'category': 'utility',
+      'description': 'Purpose-built C2O test module covering every extractor surface',
+      'id': 'dummy_device',
+      'manufacturer': 'Generic',
+      'name': 'Dummy Device',
+      'source_url': 'https://github.com/Capp3/companion-2-openavc',
+      'version': '1.0.0',
+    }),
+    'review_flags': tuple(
+    ),
+  })
+# ---

@@ -85,3 +85,9 @@ def test_declined_responses_not_expressible_has_responses_blocker(fixtures_dir: 
 def test_bmd_webpresenter_is_eligible(bmd_webpresenter: Path) -> None:
     gate = assess_module(parse_module(bmd_webpresenter))
     assert gate.eligible is True
+
+
+def test_unknown_vendor_is_eligible(unknown_vendor: Path) -> None:
+    gate = assess_module(parse_module(unknown_vendor))
+    assert gate.eligible is True
+    assert gate.blockers == ()

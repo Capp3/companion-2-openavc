@@ -1,0 +1,23 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_transport_golden
+  dict({
+    'transport': dict({
+      'delimiter': '''
+        
+  
+      ''',
+      'transport': 'tcp',
+    }),
+  })
+# ---
+# name: test_dummy_transport_golden
+  dict({
+    'transport': dict({
+      'delimiter': '''
+        
+  
+      ''',
+      'transport': 'tcp',
+    }),
+  })
+# ---

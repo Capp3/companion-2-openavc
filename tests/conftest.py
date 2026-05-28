@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -33,9 +34,27 @@ def bmd_webpresenter(fixtures_dir: Path) -> Path:
     return fixtures_dir / "external" / "bmd-webpresenter"
 
 
+@pytest.fixture
+def unknown_vendor(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "unknown-vendor"
+
+
 @pytest.fixture(autouse=True)
 def frozen_declined_at(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin decline timestamps across CLI integration tests."""
     import c2o.cli
 
     monkeypatch.setattr(c2o.cli, "_declined_at_override", FROZEN_DECLINED_AT)
+
+
+@pytest.fixture(autouse=True)
+def patched_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the CLI registry across tests to the vendored snapshot."""
+    import c2o.cli
+    from c2o.registry import VENDORED_PATH, Registry
+
+    registry = Registry.from_names(
+        json.loads(VENDORED_PATH.read_text(encoding="utf-8")),
+        source="vendored",
+    )
+    monkeypatch.setattr(c2o.cli, "_registry_override", registry)

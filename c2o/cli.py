@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,21 @@ from c2o.emit.decline import (
     declined_json_path_for_output,
     write_declined_json,
 )
-from c2o.parse.js import parse_module
+from c2o.extract import (
+    CommandsExtractionError,
+    ConfigFieldsExtractionError,
+    ManifestExtractionError,
+    StateVariablesExtractionError,
+    TransportExtractionError,
+    extract_commands,
+    extract_config_fields,
+    extract_manifest,
+    extract_state_variables,
+    extract_transport,
+)
+from c2o.model.review import ReviewCode, ReviewReport
+from c2o.parse.js import ParsedModule, parse_module
+from c2o.registry import Registry, reconcile_manufacturer
 from c2o.source.local import read_module_id, resolve_local
 from c2o.suitability.blockers import Blocker
 from c2o.suitability.gate import GateResult, assess_module
@@ -26,6 +41,11 @@ app = typer.Typer(
 
 # Injectable clock for tests (monkeypatch this attribute).
 _declined_at_override: datetime | None = None
+
+# Injectable registry for tests; production uses the live upstream-with-vendored-fallback loader.
+_registry_override: Registry | None = None
+
+_UNSET = object()
 
 
 def _not_implemented(name: str) -> None:
@@ -57,19 +77,96 @@ def _resolve_local_input(source: str) -> Path:
     return resolve_local(source)
 
 
-def _assess_local_source(source: str) -> tuple[Path, str, GateResult]:
+def _assess_local_source(source: str) -> tuple[Path, str, ParsedModule, GateResult]:
     root = _resolve_local_input(source)
     module_id = read_module_id(root)
     parsed = parse_module(root)
-    return root, module_id, assess_module(parsed)
+    return root, module_id, parsed, assess_module(parsed)
 
 
-def _render_inspect(module_id: str, gate: GateResult) -> None:
+def _load_registry() -> Registry:
+    return _registry_override if _registry_override is not None else Registry.load()
+
+
+def _escape_delimiter(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n")
+
+
+def _render_default(value: object) -> str:
+    return json.dumps(value)
+
+
+def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: GateResult) -> None:
     if gate.eligible:
         typer.echo("Eligibility: eligible")
         typer.echo(f"Module: {module_id}")
         typer.echo("Ready for extraction: yes")
-        typer.echo("Note: extraction is not implemented until M4+.")
+        try:
+            manifest, review = extract_manifest(root)
+        except ManifestExtractionError as exc:
+            typer.echo(f"Manifest extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
+        review = ReviewReport(flags=review.flags + registry_report.flags)
+        typer.echo("Metadata:")
+        typer.echo(f"  id: {manifest.id}")
+        typer.echo(f"  name: {manifest.name}")
+        typer.echo(f"  manufacturer: {manifest.manufacturer}")
+        typer.echo(f"  category: {manifest.category}")
+        typer.echo(f"  version: {manifest.version}")
+        typer.echo(f"  author: {manifest.author}")
+        typer.echo(f"  description: {manifest.description}")
+        typer.echo(f"  source_url: {manifest.source_url or '<unresolved>'}")
+        manufacturer_flags = registry_report.by_code(ReviewCode.UNKNOWN_MANUFACTURER)
+        if manufacturer_flags:
+            suggestions = manufacturer_flags[0].details.get("suggestions", "")
+            suffix = f" (suggestions: {suggestions})" if suggestions else " (no close matches)"
+            typer.echo(f"Manufacturer match: unknown{suffix}")
+        else:
+            typer.echo("Manufacturer match: ok")
+        try:
+            transport = extract_transport(parsed)
+        except TransportExtractionError as exc:
+            typer.echo(f"Transport extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo(f"Transport: {transport.transport}")
+        if transport.delimiter is None:
+            typer.echo('Delimiter: <default ("\\r")>')
+        else:
+            typer.echo(f'Delimiter: "{_escape_delimiter(transport.delimiter)}"')
+        try:
+            config_fields = extract_config_fields(parsed)
+        except ConfigFieldsExtractionError as exc:
+            typer.echo(f"Config fields extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo(f"Config fields: {len(config_fields.config_schema)}")
+        for key, entry in list(config_fields.config_schema.items())[:3]:
+            default = config_fields.default_config.get(key, _UNSET)
+            suffix = "" if default is _UNSET else f" (default: {_render_default(default)})"
+            typer.echo(f"  {key}: {entry.type}{suffix}")
+        try:
+            state_variables, sv_review = extract_state_variables(parsed)
+        except StateVariablesExtractionError as exc:
+            typer.echo(f"State variables extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + sv_review.flags)
+        typer.echo(f"State variables: {len(state_variables.state_variables)}")
+        for var_id, var_entry in list(state_variables.state_variables.items())[:3]:
+            inferred = var_entry.type or "string"
+            typer.echo(f'  {var_id}: {inferred} ("{var_entry.label}")')
+        try:
+            commands, cmd_review = extract_commands(parsed)
+        except CommandsExtractionError as exc:
+            typer.echo(f"Commands extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + cmd_review.flags)
+        typer.echo(f"Commands: {len(commands.commands)}")
+        for cmd_key, cmd_entry in list(commands.commands.items())[:3]:
+            preview = cmd_entry.send if len(cmd_entry.send) <= 40 else cmd_entry.send[:37] + "..."
+            typer.echo(f'  {cmd_key}: "{preview}"')
+        typer.echo(f"Review flags: {len(review)}")
+        for flag in review.flags[:3]:
+            typer.echo(f"  [{flag.code.value}] {flag.field} - {flag.message}")
         return
 
     typer.echo("Eligibility: declined")
@@ -94,7 +191,7 @@ def convert(
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
     _ = lenient
-    root, module_id, gate = _assess_local_source(source)
+    root, module_id, _parsed, gate = _assess_local_source(source)
 
     if not gate.eligible:
         out_path = Path(output)
@@ -121,8 +218,8 @@ def inspect(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
 ) -> None:
     """Show suitability gate result and extraction summary without writing files."""
-    _root, module_id, gate = _assess_local_source(source)
-    _render_inspect(module_id, gate)
+    root, module_id, parsed, gate = _assess_local_source(source)
+    _render_inspect(root, module_id, parsed, gate)
 
 
 @app.command()

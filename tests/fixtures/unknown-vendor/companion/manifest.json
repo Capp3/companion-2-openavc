@@ -1,0 +1,19 @@
+{
+  "id": "unknown_vendor_device",
+  "name": "Unknown Vendor Device",
+  "shortname": "Unknown Vendor",
+  "description": "Eligible TCP fixture with a manufacturer that is not in the upstream registry.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "https://github.com/Capp3/companion-2-openavc",
+  "manufacturer": "Blackmagic Designs",
+  "maintainers": [{ "name": "C2O Fixture Bot" }],
+  "products": ["Unknown Vendor A"],
+  "keywords": ["utility"],
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  }
+}

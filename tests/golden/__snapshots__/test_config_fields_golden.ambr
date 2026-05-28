@@ -1,0 +1,67 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_config_fields_golden
+  dict({
+    'config_fields': dict({
+      'config_schema': dict({
+        'host': dict({
+          'label': 'Device IP',
+          'required': True,
+          'type': 'string',
+        }),
+        'port': dict({
+          'label': 'Device Port',
+          'max': 65535,
+          'min': 1,
+          'type': 'integer',
+        }),
+      }),
+      'default_config': dict({
+        'host': '',
+        'port': 9977,
+      }),
+    }),
+  })
+# ---
+# name: test_dummy_config_fields_golden
+  dict({
+    'config_fields': dict({
+      'config_schema': dict({
+        'host': dict({
+          'label': 'Host',
+          'type': 'string',
+        }),
+        'mode': dict({
+          'label': 'Mode',
+          'type': 'enum',
+          'values': tuple(
+            'auto',
+            'manual',
+          ),
+        }),
+        'poll_interval': dict({
+          'label': 'Poll interval (sec)',
+          'max': 60,
+          'min': 1,
+          'type': 'integer',
+        }),
+        'port': dict({
+          'label': 'Port',
+          'max': 65535,
+          'min': 1,
+          'type': 'integer',
+        }),
+        'verbose': dict({
+          'label': 'Verbose logging',
+          'type': 'boolean',
+        }),
+      }),
+      'default_config': dict({
+        'host': '192.168.1.10',
+        'mode': 'auto',
+        'poll_interval': 5,
+        'port': 5000,
+        'verbose': False,
+      }),
+    }),
+  })
+# ---

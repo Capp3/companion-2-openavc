@@ -21,6 +21,7 @@ echo "Upstream commit: ${COMMIT}"
 mkdir -p "${VENDOR_DIR}/scripts"
 cp "${TEMP_DIR}/openavc-drivers/scripts/build_index.py" "${VENDOR_DIR}/scripts/"
 cp "${TEMP_DIR}/openavc-drivers/manufacturers.json" "${VENDOR_DIR}/"
+cp "${TEMP_DIR}/openavc-drivers/avcdriver.schema.json" "${VENDOR_DIR}/"
 cp "${TEMP_DIR}/openavc-drivers/AGENTS.md" "${VENDOR_DIR}/"
 echo "${COMMIT}" > "${VENDOR_DIR}/VENDOR_COMMIT"
 
