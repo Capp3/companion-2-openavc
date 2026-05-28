@@ -16,7 +16,7 @@ from c2o.emit.decline import (
 from c2o.parse.js import parse_module
 from c2o.source.local import read_module_id, resolve_local
 from c2o.suitability.blockers import Blocker
-from c2o.suitability.gate import assess_module
+from c2o.suitability.gate import GateResult, assess_module
 
 app = typer.Typer(
     name="c2o",
@@ -46,24 +46,55 @@ def _decline_stderr(module_id: str, blockers: tuple[Blocker, ...]) -> None:
     )
 
 
+def _resolve_local_input(source: str) -> Path:
+    source_path = Path(source)
+    if not source_path.is_dir():
+        typer.echo(
+            "Only local directory sources are supported before M13 (URL/bare ID resolution).",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    return resolve_local(source)
+
+
+def _assess_local_source(source: str) -> tuple[Path, str, GateResult]:
+    root = _resolve_local_input(source)
+    module_id = read_module_id(root)
+    parsed = parse_module(root)
+    return root, module_id, assess_module(parsed)
+
+
+def _render_inspect(module_id: str, gate: GateResult) -> None:
+    if gate.eligible:
+        typer.echo("Eligibility: eligible")
+        typer.echo(f"Module: {module_id}")
+        typer.echo("Ready for extraction: yes")
+        typer.echo("Note: extraction is not implemented until M4+.")
+        return
+
+    typer.echo("Eligibility: declined")
+    typer.echo(f"Module: {module_id}")
+    typer.echo(f"Blockers: {len(gate.blockers)}")
+    typer.echo("Code | Message | Evidence")
+    typer.echo("--- | --- | ---")
+    for blocker in gate.blockers:
+        typer.echo(f"{blocker.code} | {blocker.message} | {blocker.evidence}")
+
+
 @app.command()
 def convert(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
     output: str = typer.Option(..., "-o", "--output", help="Output .avcdriver path."),
+    lenient: bool = typer.Option(
+        False,
+        "--lenient",
+        "-l",
+        help="Relax review handling for eligible modules; never overrides a decline.",
+    ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
-    source_path = Path(source)
-    if not source_path.is_dir():
-        typer.echo(
-            "Only local directory sources are supported in M1 (URL/bare ID: milestone M13).",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
-    root = resolve_local(source)
-    module_id = read_module_id(root)
-    parsed = parse_module(root)
-    gate = assess_module(parsed)
+    _ = lenient
+    root, module_id, gate = _assess_local_source(source)
 
     if not gate.eligible:
         out_path = Path(output)
@@ -90,7 +121,8 @@ def inspect(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
 ) -> None:
     """Show suitability gate result and extraction summary without writing files."""
-    _not_implemented("inspect")
+    _root, module_id, gate = _assess_local_source(source)
+    _render_inspect(module_id, gate)
 
 
 @app.command()

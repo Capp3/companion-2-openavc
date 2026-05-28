@@ -1,0 +1,6 @@
+{
+  "name": "companion-module-declined-transport-unknown",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "companion-module-declined-binary-framing",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js"
+}

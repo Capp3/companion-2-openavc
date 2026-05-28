@@ -30,7 +30,6 @@ help: ## Show this help message
 
 install: ## Install uv (https://docs.astral.sh/uv/)
 	curl -LsSf https://astral.sh/uv/install.sh | sh
-  uv sync
 
 sync: ## Install runtime + dev + docs dependencies
 	uv sync --all-extras
