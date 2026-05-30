@@ -17,15 +17,22 @@ from c2o.emit.decline import (
 from c2o.extract import (
     CommandsExtractionError,
     ConfigFieldsExtractionError,
+    HelpExtractionError,
     ManifestExtractionError,
+    PollingExtractionError,
+    ResponsesExtractionError,
     StateVariablesExtractionError,
     TransportExtractionError,
     extract_commands,
     extract_config_fields,
+    extract_help,
     extract_manifest,
+    extract_polling,
+    extract_responses,
     extract_state_variables,
     extract_transport,
 )
+from c2o.model.driver import ConfigFieldsSection, PollingSection
 from c2o.model.review import ReviewCode, ReviewReport
 from c2o.parse.js import ParsedModule, parse_module
 from c2o.registry import Registry, reconcile_manufacturer
@@ -96,6 +103,27 @@ def _render_default(value: object) -> str:
     return json.dumps(value)
 
 
+def _escape_query_preview(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n")
+    return escaped.replace("\t", "\\t")
+
+
+def _render_poll_interval_line(
+    config_fields: ConfigFieldsSection,
+    polling: PollingSection,
+) -> None:
+    if "poll_interval" in config_fields.default_config:
+        typer.echo(f"  poll_interval: {config_fields.default_config['poll_interval']} (config)")
+    elif polling.inferred_poll_interval is not None:
+        typer.echo(f"  poll_interval: {polling.inferred_poll_interval} (inferred)")
+
+
+def _preview_text(text: str, limit: int = 80) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3] + "..."
+
+
 def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: GateResult) -> None:
     if gate.eligible:
         typer.echo("Eligibility: eligible")
@@ -164,6 +192,39 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
         for cmd_key, cmd_entry in list(commands.commands.items())[:3]:
             preview = cmd_entry.send if len(cmd_entry.send) <= 40 else cmd_entry.send[:37] + "..."
             typer.echo(f'  {cmd_key}: "{preview}"')
+        try:
+            responses, _resp_review = extract_responses(parsed)
+        except ResponsesExtractionError as exc:
+            typer.echo(f"Responses extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo(f"Responses: {len(responses.responses)}")
+        for resp_entry in responses.responses[:3]:
+            preview = (
+                resp_entry.match if len(resp_entry.match) <= 40 else resp_entry.match[:37] + "..."
+            )
+            typer.echo(f"  {preview}")
+        try:
+            polling, _poll_review = extract_polling(parsed)
+        except PollingExtractionError as exc:
+            typer.echo(f"Polling extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo(f"Polling: {len(polling.queries)} queries")
+        _render_poll_interval_line(config_fields, polling)
+        for query in polling.queries[:3]:
+            preview = query if len(query) <= 40 else query[:37] + "..."
+            typer.echo(f'  "{_escape_query_preview(preview)}"')
+        try:
+            help_section, _help_review = extract_help(
+                root,
+                parsed,
+                manifest_description=manifest.description,
+            )
+        except HelpExtractionError as exc:
+            typer.echo(f"Help extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo("Help:")
+        typer.echo(f"  overview: {_preview_text(help_section.overview)}")
+        typer.echo(f"  setup: {_preview_text(help_section.setup)}")
         typer.echo(f"Review flags: {len(review)}")
         for flag in review.flags[:3]:
             typer.echo(f"  [{flag.code.value}] {flag.field} - {flag.message}")

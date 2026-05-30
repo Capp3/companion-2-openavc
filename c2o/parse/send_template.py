@@ -77,6 +77,32 @@ def resolve_send_in_block(
     )
 
 
+def resolve_all_static_sends(body: Node, source: str) -> list[str]:
+    """Return static send payloads in source order; skip non-static calls."""
+    payloads: list[str] = []
+    for call in _find_send_calls(body, source):
+        arg_node = call.child_by_field_name("arguments")
+        if arg_node is None or not arg_node.named_children:
+            continue
+        expression = arg_node.named_children[0]
+        if contains_rejected_expression(expression, source):
+            continue
+        resolved = _resolve_send_expression(
+            expression,
+            scope=body,
+            source=source,
+            known_param_ids=set(),
+        )
+        if resolved is not None:
+            payloads.append(resolved)
+    return payloads
+
+
+def body_contains_send_call(body: Node, source: str) -> bool:
+    """Return True when a body subtree contains a socket send or sendCommand call."""
+    return bool(_find_send_calls(body, source))
+
+
 def parse_options_member(node: Node, source: str) -> str | None:
     """Return the option id from ``options.id`` / ``event.options.id`` / ``action.options.id``."""
     if node.type != "member_expression":

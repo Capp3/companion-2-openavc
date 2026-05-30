@@ -7,6 +7,7 @@ from tree_sitter import Node
 from c2o.parse.js import parse_source
 from c2o.parse.send_template import (
     normalize_placeholder,
+    resolve_all_static_sends,
     resolve_send_in_block,
     snake_lower,
 )
@@ -65,3 +66,22 @@ def test_resolve_send_in_block_rejects_parse_variables() -> None:
     body = _body(source)
     assert body is not None
     assert resolve_send_in_block(body, source, {"key"}) is None
+
+
+def test_resolve_all_static_sends_preserves_source_order() -> None:
+    source = (
+        "function f() { this.socket.send('QUERY INPUT\\n'); this.socket.send('QUERY MUTE\\n') }"
+    )
+    body = _body(source)
+    assert body is not None
+    assert resolve_all_static_sends(body, source) == ["QUERY INPUT\n", "QUERY MUTE\n"]
+
+
+def test_resolve_all_static_sends_skips_dynamic_send() -> None:
+    source = (
+        "function f() { this.socket.send('STATIC\\n'); "
+        "this.socket.send(event.options.dynamic); }"
+    )
+    body = _body(source)
+    assert body is not None
+    assert resolve_all_static_sends(body, source) == ["STATIC\n"]

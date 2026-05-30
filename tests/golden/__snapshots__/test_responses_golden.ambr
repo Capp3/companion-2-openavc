@@ -1,0 +1,134 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_responses_golden
+  dict({
+    'responses': dict({
+      'responses': tuple(
+        dict({
+          'match': '^Label:\\s*(.+)$',
+          'set': dict({
+            'label': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Model:\\s*(.+)$',
+          'set': dict({
+            'model': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Software\\ Release:\\s*(.+)$',
+          'set': dict({
+            'software': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Video\\ Mode:\\s*(.+)$',
+          'set': dict({
+            'video_mode': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Current\\ Quality\\ Level:\\s*(.+)$',
+          'set': dict({
+            'quality': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Current\\ Server:\\s*(.+)$',
+          'set': dict({
+            'server': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Current\\ Platform:\\s*(.+)$',
+          'set': dict({
+            'platform': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Stream\\ Key:\\s*(.+)$',
+          'set': dict({
+            'key': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Password:\\s*(.+)$',
+          'set': dict({
+            'passphrase': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Current\\ URL:\\s*(.+)$',
+          'set': dict({
+            'URL': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Status:\\s*(.+)$',
+          'set': dict({
+            'stream_state': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Duration:\\s*(.+)$',
+          'set': dict({
+            'stream_duration': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Bitrate:\\s*(.+)$',
+          'set': dict({
+            'stream_bitrate': '$1',
+          }),
+        }),
+        dict({
+          'match': '^Cache\\ Used:\\s*(.+)$',
+          'set': dict({
+            'cache': '$1',
+          }),
+        }),
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---
+# name: test_dummy_responses_golden
+  dict({
+    'responses': dict({
+      'responses': tuple(
+        dict({
+          'mappings': tuple(
+            dict({
+              'group': 1,
+              'state': 'input_level',
+              'type': 'integer',
+            }),
+          ),
+          'match': '^INPUT=(\\d+)$',
+        }),
+        dict({
+          'mappings': tuple(
+            dict({
+              'group': 1,
+              'map': dict({
+                'OFF': False,
+                'ON': True,
+              }),
+              'state': 'mute_state',
+            }),
+          ),
+          'match': '^MUTE=(ON|OFF)$',
+        }),
+        dict({
+          'match': '^LABEL=(.+)$',
+          'set': dict({
+            'device_label': '$1',
+          }),
+        }),
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---

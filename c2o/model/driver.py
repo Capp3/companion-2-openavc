@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 DriverCategory = Literal[
     "projector",
@@ -120,3 +120,63 @@ class CommandsSection(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     commands: dict[str, CommandEntry] = Field(default_factory=dict)
+
+
+ResponseMappingType = Literal["string", "integer", "float", "number", "boolean"]
+
+
+class ResponseMappingEntry(BaseModel):
+    """A single verbose response mapping row (upstream mappings[])."""
+
+    model_config = ConfigDict(frozen=True)
+
+    group: int
+    state: str = Field(min_length=1)
+    type: ResponseMappingType | None = None
+    map: dict[str, bool | str | int | float] | None = None
+    value: bool | str | int | float | None = None
+
+
+class ResponseEntry(BaseModel):
+    """A single OpenAVC responses[] entry."""
+
+    model_config = ConfigDict(frozen=True)
+
+    match: str = Field(min_length=1)
+    set: dict[str, str] | None = None
+    mappings: tuple[ResponseMappingEntry, ...] | None = None
+
+    @model_validator(mode="after")
+    def _validate_set_xor_mappings(self) -> ResponseEntry:
+        has_set = self.set is not None and len(self.set) > 0
+        has_mappings = self.mappings is not None and len(self.mappings) > 0
+        if has_set == has_mappings:
+            msg = "ResponseEntry requires exactly one of set or mappings"
+            raise ValueError(msg)
+        return self
+
+
+class ResponsesSection(BaseModel):
+    """OpenAVC responses extracted from receive handlers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    responses: tuple[ResponseEntry, ...] = ()
+
+
+class PollingSection(BaseModel):
+    """OpenAVC polling queries and optional inferred poll cadence."""
+
+    model_config = ConfigDict(frozen=True)
+
+    queries: tuple[str, ...] = ()
+    inferred_poll_interval: int | None = None
+
+
+class HelpSection(BaseModel):
+    """OpenAVC help text extracted from Companion HELP.md."""
+
+    model_config = ConfigDict(frozen=True)
+
+    overview: str = Field(min_length=1)
+    setup: str = Field(min_length=1)

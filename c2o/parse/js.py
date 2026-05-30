@@ -173,6 +173,11 @@ def find_calls(
 
 def find_method_definitions(parsed: ParsedModule, name: str) -> list[MethodMatch]:
     """Find class method definitions named `name`."""
+    return [match for match in find_all_method_definitions(parsed) if match.name == name]
+
+
+def find_all_method_definitions(parsed: ParsedModule) -> list[MethodMatch]:
+    """Find every class method definition in a parsed module."""
     query = _load_query("method_definition")
     hits: list[MethodMatch] = []
     for rel, tree in parsed.trees.items():
@@ -184,8 +189,6 @@ def find_method_definitions(parsed: ParsedModule, name: str) -> list[MethodMatch
             if not name_nodes or not method_nodes:
                 continue
             method_name = node_text(name_nodes[0], source)
-            if method_name != name:
-                continue
             hits.append(
                 MethodMatch(
                     rel_path=rel,

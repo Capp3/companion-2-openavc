@@ -47,6 +47,16 @@ def test_inspect_eligible_prints_manifest_metadata(dummy_device: Path) -> None:
     assert "Commands: 4" in result.stdout
     assert "  set_input:" in result.stdout
     assert "  stream_start:" in result.stdout
+    assert "Responses: 3" in result.stdout
+    assert "  ^INPUT=(\\d+)$" in result.stdout
+    assert "Polling: 2 queries" in result.stdout
+    assert "  poll_interval: 5 (config)" in result.stdout
+    assert '  "QUERY INPUT\\n"' in result.stdout
+    assert "Help:" in result.stdout
+    assert (
+        "  overview: Connect to the dummy device on the configured host and port." in result.stdout
+    )
+    assert "  setup: ## Setup" in result.stdout
     assert "Review flags: 4" in result.stdout
 
 
@@ -76,6 +86,12 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert '  software: string ("Device Software")' in result.stdout
     assert "Commands: 2" in result.stdout
     assert "  stream_start:" in result.stdout
+    assert "Responses: 14" in result.stdout
+    assert "Polling: 1 queries" in result.stdout
+    assert "  poll_interval: 1 (inferred)" in result.stdout
+    assert '  "STREAM STATE:\\n\\n"' in result.stdout
+    assert "Help:" in result.stdout
+    assert "  overview: Module to control and monitor the [Blackmagic" in result.stdout
     assert "Review flags: 19" in result.stdout
     assert "[id_coerced] id -" in result.stdout
 

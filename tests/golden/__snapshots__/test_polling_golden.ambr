@@ -1,0 +1,35 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_polling_golden
+  dict({
+    'polling': dict({
+      'inferred_poll_interval': 1,
+      'queries': tuple(
+        '''
+          STREAM STATE:
+          
+  
+        ''',
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---
+# name: test_dummy_polling_golden
+  dict({
+    'polling': dict({
+      'queries': tuple(
+        '''
+          QUERY INPUT
+  
+        ''',
+        '''
+          QUERY MUTE
+  
+        ''',
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---

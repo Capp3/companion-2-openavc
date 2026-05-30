@@ -13,8 +13,13 @@ from c2o.model.driver import (
     ConfigFieldsSection,
     ConfigSchemaEntry,
     DriverTransport,
+    HelpSection,
     ManifestSection,
     ParamEntry,
+    PollingSection,
+    ResponseEntry,
+    ResponseMappingEntry,
+    ResponsesSection,
     StateVariableEntry,
     StateVariablesSection,
     StateVariableType,
@@ -191,3 +196,74 @@ def test_commands_section_round_trip() -> None:
             },
         }
     }
+
+
+def test_response_entry_requires_set_xor_mappings() -> None:
+    with pytest.raises(ValidationError):
+        ResponseEntry(match=r"^X$")
+
+    with pytest.raises(ValidationError):
+        ResponseEntry(
+            match=r"^X$",
+            set={"a": "$1"},
+            mappings=(ResponseMappingEntry(group=1, state="b", type="integer"),),
+        )
+
+
+def test_response_entry_shorthand_round_trip() -> None:
+    entry = ResponseEntry(match=r"^LABEL=(.+)$", set={"device_label": "$1"})
+
+    assert entry.model_dump(exclude_none=True) == {
+        "match": r"^LABEL=(.+)$",
+        "set": {"device_label": "$1"},
+    }
+
+
+def test_responses_section_defaults_empty() -> None:
+    section = ResponsesSection()
+
+    assert section.responses == ()
+
+
+def test_polling_section_defaults_empty() -> None:
+    section = PollingSection()
+
+    assert section.queries == ()
+    assert section.inferred_poll_interval is None
+
+
+def test_polling_section_round_trip() -> None:
+    section = PollingSection(
+        queries=("QUERY INPUT\n", "QUERY MUTE\n"),
+        inferred_poll_interval=1,
+    )
+
+    assert section.model_dump(exclude_none=True) == {
+        "queries": ("QUERY INPUT\n", "QUERY MUTE\n"),
+        "inferred_poll_interval": 1,
+    }
+
+
+def test_polling_section_is_frozen() -> None:
+    section = PollingSection()
+
+    with pytest.raises(ValidationError):
+        section.queries = ("X",)
+
+
+def test_help_section_requires_non_empty_fields() -> None:
+    with pytest.raises(ValidationError):
+        HelpSection(overview="", setup="Setup text")
+
+    section = HelpSection(overview="Overview text", setup="Setup text")
+    assert section.model_dump() == {
+        "overview": "Overview text",
+        "setup": "Setup text",
+    }
+
+
+def test_help_section_is_frozen() -> None:
+    section = HelpSection(overview="Overview text", setup="Setup text")
+
+    with pytest.raises(ValidationError):
+        section.overview = "Other"

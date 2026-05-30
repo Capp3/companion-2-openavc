@@ -1,0 +1,29 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_help_golden
+  dict({
+    'help': dict({
+      'overview': 'Module to control and monitor the [Blackmagic Design Web Presenter HD and 4K](https://www.blackmagicdesign.com/products/blackmagicwebpresenter). This module does not support the discontinued USB only **Web Presenter** product.',
+      'setup': '''
+        Once connection to the device has been established the stream 'Video Mode', 'Platform' and 'Quality' action parameters will be populated with the options that the device supports. If no device connection is possible then these parameters will be unavailable. The 'Server' and 'Stream Key' will not be pre-populated. Use the Blackmagic WebPresenter desktop app to discover the valid 'Server' options for your platform. Consult your streaming platform service provider for the 'Stream Key'.
+        
+        Please log issues and feature requests on [github](https://github.com/bitfocus/companion-module-bmd-webpresenter).
+      ''',
+    }),
+    'review': list([
+    ]),
+  })
+# ---
+# name: test_dummy_help_golden
+  dict({
+    'help': dict({
+      'overview': 'Connect to the dummy device on the configured host and port.',
+      'setup': '''
+        ## Setup
+        
+        Enter the device IP address and TCP port, then enable polling if needed.
+      ''',
+    }),
+    'review': list([
+    ]),
+  })
+# ---
