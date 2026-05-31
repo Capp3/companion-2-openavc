@@ -1,0 +1,19 @@
+{
+  "id": "http_device",
+  "name": "HTTP Device",
+  "shortname": "HTTP Device",
+  "description": "C2O fixture covering HTTP command extraction.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "https://github.com/Capp3/companion-2-openavc",
+  "manufacturer": "Generic",
+  "maintainers": [{ "name": "C2O Fixture Bot" }],
+  "products": ["HTTP-1"],
+  "keywords": ["utility"],
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  }
+}

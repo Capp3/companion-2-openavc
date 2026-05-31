@@ -200,3 +200,10 @@ def test_fixture_unknown_vendor_uses_default_delimiter(unknown_vendor: Path) -> 
 
     assert section.transport == "tcp"
     assert section.delimiter is None
+
+
+def test_fixture_http_device_extracts_http_transport(http_device: Path) -> None:
+    section = extract_transport(parse_module(http_device))
+
+    assert section.transport == "http"
+    assert section.delimiter is None

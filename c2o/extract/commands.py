@@ -7,6 +7,7 @@ from typing import Any
 from tree_sitter import Node
 
 from c2o.extract.command_branching import SplitResult, split_or_single
+from c2o.extract.http_commands import HttpCommandCandidate, extract_http_command
 from c2o.extract.param_schema import build_params_from_options
 from c2o.model.driver import CommandEntry, CommandsSection
 from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
@@ -18,6 +19,7 @@ from c2o.parse.js import (
     resolve_object_via_assignments,
 )
 from c2o.parse.literals import UNRESOLVED, decode_js_value, pair_key
+from c2o.parse.send_template import body_contains_send_call
 
 
 class CommandsExtractionError(ValueError):
@@ -41,6 +43,23 @@ def extract_commands(parsed: ParsedModule) -> tuple[CommandsSection, ReviewRepor
         help_text = _first_option_tooltip(action_field.get("options"))
         base_params = build_params_from_options(action_field.get("options"))
 
+        body = _callback_body(callback_node)
+        if body is not None and not body_contains_send_call(body, source):
+            http_candidate = extract_http_command(
+                action_key=action_key,
+                label=label,
+                callback_node=callback_node,
+                source=source,
+                base_params=base_params,
+            )
+            if http_candidate is not None:
+                _merge_http_candidate(
+                    http_candidate,
+                    help_text=help_text,
+                    commands=commands,
+                )
+                continue
+
         result = split_or_single(
             action_key=action_key,
             label=label,
@@ -58,6 +77,24 @@ def extract_commands(parsed: ParsedModule) -> tuple[CommandsSection, ReviewRepor
         )
 
     return CommandsSection(commands=commands), ReviewReport(flags=tuple(flags))
+
+
+def _merge_http_candidate(
+    candidate: HttpCommandCandidate,
+    *,
+    help_text: str | None,
+    commands: dict[str, CommandEntry],
+) -> None:
+    commands[candidate.command_key] = CommandEntry(
+        label=candidate.label,
+        method=candidate.method,
+        path=candidate.path,
+        body=candidate.body,
+        headers=candidate.headers,
+        query_params=candidate.query_params,
+        help=help_text,
+        params=candidate.params,
+    )
 
 
 def _merge_split_result(
@@ -160,6 +197,14 @@ def _find_callback_node(object_node: Node, source: str) -> Node | None:
             return None
         if value.type in {"arrow_function", "function", "function_expression"}:
             return value
+    return None
+
+
+def _callback_body(callback_node: Node) -> Node | None:
+    if callback_node.type == "arrow_function":
+        return callback_node.child_by_field_name("body")
+    if callback_node.type in {"function", "function_expression"}:
+        return callback_node.child_by_field_name("body")
     return None
 
 

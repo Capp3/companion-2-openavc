@@ -103,6 +103,22 @@ def body_contains_send_call(body: Node, source: str) -> bool:
     return bool(_find_send_calls(body, source))
 
 
+def resolve_string_expression(
+    node: Node,
+    *,
+    scope: Node,
+    source: str,
+    known_param_ids: set[str],
+) -> str | None:
+    """Resolve a static string/template/concat expression with option placeholders."""
+    return _resolve_send_expression(
+        node,
+        scope=scope,
+        source=source,
+        known_param_ids=known_param_ids,
+    )
+
+
 def parse_options_member(node: Node, source: str) -> str | None:
     """Return the option id from ``options.id`` / ``event.options.id`` / ``action.options.id``."""
     if node.type != "member_expression":

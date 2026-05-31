@@ -17,6 +17,8 @@ class ReviewCode(StrEnum):
     UNKNOWN_MANUFACTURER = "unknown_manufacturer"
     INFERRED_STATE_TYPE = "inferred_state_type"
     STATE_DEPENDENT_BRANCH = "state_dependent_branch"
+    MISSING_DISCOVERY_FINGERPRINT = "missing_discovery_fingerprint"
+    COMPATIBLE_MODELS_CONFIDENCE = "compatible_models_confidence"
 
 
 class ReviewFlag(BaseModel):

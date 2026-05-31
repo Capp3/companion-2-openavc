@@ -113,3 +113,60 @@
     ]),
   })
 # ---
+# name: test_http_device_commands_golden
+  dict({
+    'commands': dict({
+      'commands': dict({
+        'get_status': dict({
+          'help': 'Select status detail level.',
+          'label': 'Get Status',
+          'method': 'GET',
+          'params': dict({
+            'include': dict({
+              'help': 'Select status detail level.',
+              'label': 'Include',
+              'type': 'enum',
+              'values': tuple(
+                'summary',
+                'details',
+              ),
+            }),
+          }),
+          'path': '/api/status',
+          'query_params': dict({
+            'include': '{include}',
+          }),
+        }),
+        'post_event': dict({
+          'body': '{"name": "{name}"}',
+          'label': 'Post Event',
+          'method': 'POST',
+          'params': dict({
+            'name': dict({
+              'label': 'Name',
+              'type': 'string',
+            }),
+          }),
+          'path': '/api/event',
+        }),
+        'send_xml': dict({
+          'body': '<msg>{value}</msg>',
+          'headers': dict({
+            'Content-Type': 'text/xml',
+          }),
+          'label': 'Send XML',
+          'method': 'POST',
+          'params': dict({
+            'value': dict({
+              'label': 'Value',
+              'type': 'string',
+            }),
+          }),
+          'path': '/api/payload',
+        }),
+      }),
+    }),
+    'review': list([
+    ]),
+  })
+# ---

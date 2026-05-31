@@ -16,6 +16,8 @@ def test_review_code_catalogue() -> None:
         "unknown_manufacturer",
         "inferred_state_type",
         "state_dependent_branch",
+        "missing_discovery_fingerprint",
+        "compatible_models_confidence",
     ]
 
 

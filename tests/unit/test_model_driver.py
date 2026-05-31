@@ -10,11 +10,16 @@ from pydantic import ValidationError
 from c2o.model.driver import (
     CommandEntry,
     CommandsSection,
+    CompatibleModelEntry,
+    CompatibleModelsSection,
     ConfigFieldsSection,
     ConfigSchemaEntry,
+    DiscoverySection,
     DriverTransport,
     HelpSection,
+    HttpMethod,
     ManifestSection,
+    OnConnectSection,
     ParamEntry,
     PollingSection,
     ResponseEntry,
@@ -173,11 +178,76 @@ def test_param_entry_aliases_config_schema_entry() -> None:
     assert ParamEntry is ConfigSchemaEntry
 
 
-def test_command_entry_requires_label_and_send() -> None:
+def test_http_method_literal_matches_supported_values() -> None:
+    assert get_args(HttpMethod) == ("GET", "POST", "PUT", "DELETE", "PATCH")
+
+
+def test_command_entry_accepts_tcp_send_shape() -> None:
     entry = CommandEntry(label="Set Input", send="SET INPUT {input}\n")
 
     assert entry.params == {}
     assert entry.help is None
+    assert entry.method is None
+
+
+def test_command_entry_accepts_http_shape() -> None:
+    entry = CommandEntry(
+        label="Get Status",
+        method="GET",
+        path="/api/status",
+        query_params={"include": "{include}"},
+    )
+
+    assert entry.model_dump(exclude_none=True, exclude_defaults=True) == {
+        "label": "Get Status",
+        "method": "GET",
+        "path": "/api/status",
+        "query_params": {"include": "{include}"},
+    }
+
+
+def test_command_entry_accepts_http_body_and_headers() -> None:
+    entry = CommandEntry(
+        label="Send XML",
+        method="POST",
+        path="/api/payload",
+        body="<msg>{value}</msg>",
+        headers={"Content-Type": "text/xml"},
+    )
+
+    assert entry.model_dump(exclude_none=True, exclude_defaults=True) == {
+        "label": "Send XML",
+        "method": "POST",
+        "path": "/api/payload",
+        "body": "<msg>{value}</msg>",
+        "headers": {"Content-Type": "text/xml"},
+    }
+
+
+def test_command_entry_rejects_missing_command_shape() -> None:
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad")
+
+
+def test_command_entry_rejects_mixed_tcp_http_shape() -> None:
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad", send="X", method="GET", path="/api/status")
+
+
+def test_command_entry_rejects_incomplete_http_shape() -> None:
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad", method="GET")
+
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad", path="/api/status")
+
+
+def test_command_entry_rejects_http_fields_on_tcp_shape() -> None:
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad", send="X", headers={"Content-Type": "text/xml"})
+
+    with pytest.raises(ValidationError):
+        CommandEntry(label="Bad", send="X", query_params={"include": "details"})
 
 
 def test_commands_section_round_trip() -> None:
@@ -187,12 +257,11 @@ def test_commands_section_round_trip() -> None:
         }
     )
 
-    assert section.model_dump(exclude_none=True) == {
+    assert section.model_dump(exclude_none=True, exclude_defaults=True) == {
         "commands": {
             "set_input": {
                 "label": "Set Input",
                 "send": "SET INPUT {input}\n",
-                "params": {},
             },
         }
     }
@@ -249,6 +318,66 @@ def test_polling_section_is_frozen() -> None:
 
     with pytest.raises(ValidationError):
         section.queries = ("X",)
+
+
+def test_discovery_section_round_trip() -> None:
+    section = DiscoverySection(
+        port_open=(9977,),
+        manufacturer_alias=("Blackmagic Design", "Blackmagic"),
+    )
+
+    assert section.model_dump(exclude_none=True) == {
+        "port_open": (9977,),
+        "manufacturer_alias": ("Blackmagic Design", "Blackmagic"),
+    }
+
+
+def test_discovery_section_defaults_empty() -> None:
+    section = DiscoverySection()
+
+    assert section.port_open == ()
+    assert section.manufacturer_alias == ()
+
+
+def test_compatible_models_section_round_trip() -> None:
+    section = CompatibleModelsSection(
+        compatible_models=(
+            CompatibleModelEntry(
+                manufacturer="Blackmagic Design",
+                models=("WebPresenter HD", "WebPresenter 4K"),
+                confidence="untested",
+            ),
+        )
+    )
+
+    assert section.model_dump(exclude_none=True) == {
+        "compatible_models": (
+            {
+                "manufacturer": "Blackmagic Design",
+                "models": ("WebPresenter HD", "WebPresenter 4K"),
+                "confidence": "untested",
+            },
+        )
+    }
+
+
+def test_compatible_model_entry_rejects_unknown_confidence() -> None:
+    invalid_confidence: Any = "bogus"
+
+    with pytest.raises(ValidationError):
+        CompatibleModelEntry(
+            manufacturer="Generic",
+            models=("Dummy Model A",),
+            confidence=invalid_confidence,
+        )
+
+
+def test_on_connect_section_round_trip() -> None:
+    section = OnConnectSection(commands=("HELLO\n", "INIT\n"))
+
+    assert section.model_dump(exclude_none=True) == {
+        "commands": ("HELLO\n", "INIT\n"),
+    }
 
 
 def test_help_section_requires_non_empty_fields() -> None:

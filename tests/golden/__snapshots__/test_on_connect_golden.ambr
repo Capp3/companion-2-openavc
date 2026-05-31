@@ -1,0 +1,39 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_on_connect_golden
+  dict({
+    'on_connect': dict({
+      'commands': tuple(
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---
+# name: test_dummy_on_connect_golden
+  dict({
+    'on_connect': dict({
+      'commands': tuple(
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---
+# name: test_static_on_connect_on_connect_golden
+  dict({
+    'on_connect': dict({
+      'commands': tuple(
+        '''
+          HELLO
+  
+        ''',
+        '''
+          INIT
+  
+        ''',
+      ),
+    }),
+    'review': list([
+    ]),
+  })
+# ---

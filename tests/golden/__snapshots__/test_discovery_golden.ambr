@@ -1,0 +1,69 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_discovery_golden
+  dict({
+    'discovery': dict({
+      'manufacturer_alias': tuple(
+        'Blackmagic Design',
+        'Blackmagic',
+      ),
+      'port_open': tuple(
+        9977,
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.MISSING_DISCOVERY_FINGERPRINT: 'missing_discovery_fingerprint'>,
+        'details': dict({
+          'missing': 'mdns,ssdp,amx_ddp,tcp_probe,udp_probe,python,hostname,oui,snmp_pen',
+        }),
+        'field': 'discovery',
+        'message': 'Companion modules do not statically expose mdns/ssdp/amx_ddp/tcp_probe/udp_probe/python/hostname/oui/snmp_pen fingerprints; extend by hand if the device supports them.',
+      }),
+    ]),
+  })
+# ---
+# name: test_dummy_discovery_golden
+  dict({
+    'discovery': dict({
+      'manufacturer_alias': tuple(
+        'Generic',
+      ),
+      'port_open': tuple(
+        5000,
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.MISSING_DISCOVERY_FINGERPRINT: 'missing_discovery_fingerprint'>,
+        'details': dict({
+          'missing': 'mdns,ssdp,amx_ddp,tcp_probe,udp_probe,python,hostname,oui,snmp_pen',
+        }),
+        'field': 'discovery',
+        'message': 'Companion modules do not statically expose mdns/ssdp/amx_ddp/tcp_probe/udp_probe/python/hostname/oui/snmp_pen fingerprints; extend by hand if the device supports them.',
+      }),
+    ]),
+  })
+# ---
+# name: test_static_on_connect_discovery_golden
+  dict({
+    'discovery': dict({
+      'manufacturer_alias': tuple(
+        'Vendor X',
+        'Vendor',
+      ),
+      'port_open': tuple(
+        6000,
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.MISSING_DISCOVERY_FINGERPRINT: 'missing_discovery_fingerprint'>,
+        'details': dict({
+          'missing': 'mdns,ssdp,amx_ddp,tcp_probe,udp_probe,python,hostname,oui,snmp_pen',
+        }),
+        'field': 'discovery',
+        'message': 'Companion modules do not statically expose mdns/ssdp/amx_ddp/tcp_probe/udp_probe/python/hostname/oui/snmp_pen fingerprints; extend by hand if the device supports them.',
+      }),
+    ]),
+  })
+# ---

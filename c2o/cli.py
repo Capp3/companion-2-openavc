@@ -16,17 +16,23 @@ from c2o.emit.decline import (
 )
 from c2o.extract import (
     CommandsExtractionError,
+    CompatibleModelsExtractionError,
     ConfigFieldsExtractionError,
+    DiscoveryExtractionError,
     HelpExtractionError,
     ManifestExtractionError,
+    OnConnectExtractionError,
     PollingExtractionError,
     ResponsesExtractionError,
     StateVariablesExtractionError,
     TransportExtractionError,
     extract_commands,
+    extract_compatible_models,
     extract_config_fields,
+    extract_discovery,
     extract_help,
     extract_manifest,
+    extract_on_connect,
     extract_polling,
     extract_responses,
     extract_state_variables,
@@ -36,7 +42,7 @@ from c2o.model.driver import ConfigFieldsSection, PollingSection
 from c2o.model.review import ReviewCode, ReviewReport
 from c2o.parse.js import ParsedModule, parse_module
 from c2o.registry import Registry, reconcile_manufacturer
-from c2o.source.local import read_module_id, resolve_local
+from c2o.source import SourceResolutionError, read_module_id, resolve_source
 from c2o.suitability.blockers import Blocker
 from c2o.suitability.gate import GateResult, assess_module
 
@@ -73,22 +79,15 @@ def _decline_stderr(module_id: str, blockers: tuple[Blocker, ...]) -> None:
     )
 
 
-def _resolve_local_input(source: str) -> Path:
-    source_path = Path(source)
-    if not source_path.is_dir():
-        typer.echo(
-            "Only local directory sources are supported before M13 (URL/bare ID resolution).",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-    return resolve_local(source)
-
-
-def _assess_local_source(source: str) -> tuple[Path, str, ParsedModule, GateResult]:
-    root = _resolve_local_input(source)
+def _assess_root(root: Path) -> tuple[str, ParsedModule, GateResult]:
     module_id = read_module_id(root)
     parsed = parse_module(root)
-    return root, module_id, parsed, assess_module(parsed)
+    return module_id, parsed, assess_module(parsed)
+
+
+def _source_resolution_exit(exc: SourceResolutionError) -> None:
+    typer.echo(str(exc), err=True)
+    raise typer.Exit(code=1) from exc
 
 
 def _load_registry() -> Registry:
@@ -124,6 +123,18 @@ def _preview_text(text: str, limit: int = 80) -> str:
     return text[: limit - 3] + "..."
 
 
+def _render_string_list(values: tuple[str, ...]) -> str:
+    return "[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+def _render_int_list(values: tuple[int, ...]) -> str:
+    return "[" + ", ".join(str(value) for value in values) + "]"
+
+
+def _plural(count: int, singular: str, plural: str) -> str:
+    return singular if count == 1 else plural
+
+
 def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: GateResult) -> None:
     if gate.eligible:
         typer.echo("Eligibility: eligible")
@@ -136,6 +147,12 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
             raise typer.Exit(code=1) from exc
         registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
         review = ReviewReport(flags=review.flags + registry_report.flags)
+        try:
+            compatible_models, cm_review = extract_compatible_models(root, manifest)
+        except CompatibleModelsExtractionError as exc:
+            typer.echo(f"Compatible models extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + cm_review.flags)
         typer.echo("Metadata:")
         typer.echo(f"  id: {manifest.id}")
         typer.echo(f"  name: {manifest.name}")
@@ -190,8 +207,13 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
         review = ReviewReport(flags=review.flags + cmd_review.flags)
         typer.echo(f"Commands: {len(commands.commands)}")
         for cmd_key, cmd_entry in list(commands.commands.items())[:3]:
-            preview = cmd_entry.send if len(cmd_entry.send) <= 40 else cmd_entry.send[:37] + "..."
-            typer.echo(f'  {cmd_key}: "{preview}"')
+            if cmd_entry.send is not None:
+                preview = (
+                    cmd_entry.send if len(cmd_entry.send) <= 40 else cmd_entry.send[:37] + "..."
+                )
+                typer.echo(f'  {cmd_key}: "{preview}"')
+            elif cmd_entry.method is not None and cmd_entry.path is not None:
+                typer.echo(f"  {cmd_key}: {cmd_entry.method} {cmd_entry.path}")
         try:
             responses, _resp_review = extract_responses(parsed)
         except ResponsesExtractionError as exc:
@@ -213,6 +235,36 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
         for query in polling.queries[:3]:
             preview = query if len(query) <= 40 else query[:37] + "..."
             typer.echo(f'  "{_escape_query_preview(preview)}"')
+        try:
+            discovery, discovery_review = extract_discovery(
+                manifest,
+                config_fields,
+                compatible_models,
+            )
+        except DiscoveryExtractionError as exc:
+            typer.echo(f"Discovery extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + discovery_review.flags)
+        typer.echo("Discovery:")
+        typer.echo(f"  port_open: {_render_int_list(discovery.port_open)}")
+        typer.echo(f"  manufacturer_alias: {_render_string_list(discovery.manufacturer_alias)}")
+        try:
+            on_connect, on_connect_review = extract_on_connect(parsed)
+        except OnConnectExtractionError as exc:
+            typer.echo(f"On-connect extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + on_connect_review.flags)
+        typer.echo(f"On-connect: {len(on_connect.commands)} commands")
+        for command in on_connect.commands[:3]:
+            typer.echo(f'  "{_escape_query_preview(command)}"')
+        entry_count = len(compatible_models.compatible_models)
+        typer.echo(f"Compatible models: {entry_count} {_plural(entry_count, 'entry', 'entries')}")
+        for compatible_entry in compatible_models.compatible_models[:3]:
+            typer.echo(
+                f"  {compatible_entry.manufacturer}: "
+                f"{_render_string_list(compatible_entry.models)} "
+                f"({compatible_entry.confidence})"
+            )
         try:
             help_section, _help_review = extract_help(
                 root,
@@ -249,23 +301,33 @@ def convert(
         "-l",
         help="Relax review handling for eligible modules; never overrides a decline.",
     ),
+    keep_temp: bool = typer.Option(
+        False,
+        "--keep-temp",
+        help="Preserve cloned remote sources after the run for debugging.",
+    ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
     _ = lenient
-    root, module_id, _parsed, gate = _assess_local_source(source)
+    try:
+        with resolve_source(source, keep_temp=keep_temp) as resolved:
+            root = resolved.root
+            module_id, _parsed, gate = _assess_root(root)
 
-    if not gate.eligible:
-        out_path = Path(output)
-        decline_path = declined_json_path_for_output(out_path)
-        report = build_declined_report(
-            source=str(root),
-            module_id=module_id,
-            blockers=list(gate.blockers),
-            declined_at=_declined_at_override,
-        )
-        write_declined_json(decline_path, report)
-        _decline_stderr(module_id, gate.blockers)
-        raise typer.Exit(code=2)
+            if not gate.eligible:
+                out_path = Path(output)
+                decline_path = declined_json_path_for_output(out_path)
+                report = build_declined_report(
+                    source=str(root),
+                    module_id=module_id,
+                    blockers=list(gate.blockers),
+                    declined_at=_declined_at_override,
+                )
+                write_declined_json(decline_path, report)
+                _decline_stderr(module_id, gate.blockers)
+                raise typer.Exit(code=2)
+    except SourceResolutionError as exc:
+        _source_resolution_exit(exc)
 
     typer.echo(
         "Warning: module is eligible for YAML conversion, but extractors are "
@@ -277,10 +339,20 @@ def convert(
 @app.command()
 def inspect(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
+    keep_temp: bool = typer.Option(
+        False,
+        "--keep-temp",
+        help="Preserve cloned remote sources after the run for debugging.",
+    ),
 ) -> None:
     """Show suitability gate result and extraction summary without writing files."""
-    root, module_id, parsed, gate = _assess_local_source(source)
-    _render_inspect(root, module_id, parsed, gate)
+    try:
+        with resolve_source(source, keep_temp=keep_temp) as resolved:
+            root = resolved.root
+            module_id, parsed, gate = _assess_root(root)
+            _render_inspect(root, module_id, parsed, gate)
+    except SourceResolutionError as exc:
+        _source_resolution_exit(exc)
 
 
 @app.command()

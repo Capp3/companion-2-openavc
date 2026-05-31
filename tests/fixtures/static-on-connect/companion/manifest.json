@@ -1,0 +1,19 @@
+{
+  "id": "static_on_connect",
+  "name": "Static OnConnect",
+  "shortname": "Static OnConnect",
+  "description": "C2O fixture covering static on('connect') send extraction.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "https://github.com/Capp3/companion-2-openavc",
+  "manufacturer": "Vendor X",
+  "maintainers": [{ "name": "C2O Fixture Bot" }],
+  "products": ["X1"],
+  "keywords": ["utility"],
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  }
+}

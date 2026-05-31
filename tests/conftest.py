@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -37,6 +40,56 @@ def bmd_webpresenter(fixtures_dir: Path) -> Path:
 @pytest.fixture
 def unknown_vendor(fixtures_dir: Path) -> Path:
     return fixtures_dir / "unknown-vendor"
+
+
+@pytest.fixture
+def static_on_connect(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "static-on-connect"
+
+
+@pytest.fixture
+def http_device(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "http-device"
+
+
+@pytest.fixture(scope="session")
+def dummy_device_git_url(tmp_path_factory: pytest.TempPathFactory) -> str:
+    """Build a bare git mirror of dummy-device and return a file:// URL."""
+    if shutil.which("git") is None:
+        pytest.skip("git is required for source-resolution smoke tests")
+
+    root = tmp_path_factory.mktemp("dummy-device-git")
+    worktree = root / "worktree"
+    bare_repo = root / "dummy-device.git"
+    shutil.copytree(FIXTURES_DIR / "dummy-device", worktree)
+
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "c2o",
+        "GIT_AUTHOR_EMAIL": "c2o@test",
+        "GIT_COMMITTER_NAME": "c2o",
+        "GIT_COMMITTER_EMAIL": "c2o@test",
+    }
+
+    def run_git(args: list[str], *, cwd: Path | None = None) -> None:
+        subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    run_git(["init"], cwd=worktree)
+    run_git(["checkout", "-b", "main"], cwd=worktree)
+    run_git(["add", "-A"], cwd=worktree)
+    run_git(["commit", "-m", "Add dummy fixture"], cwd=worktree)
+    run_git(["init", "--bare", str(bare_repo)])
+    run_git(["remote", "add", "origin", str(bare_repo)], cwd=worktree)
+    run_git(["push", "origin", "HEAD:main"], cwd=worktree)
+
+    return bare_repo.as_uri()
 
 
 @pytest.fixture(autouse=True)

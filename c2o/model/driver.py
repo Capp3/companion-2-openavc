@@ -24,6 +24,8 @@ DriverTransport = Literal["tcp", "serial", "udp", "http", "osc"]
 ConfigFieldType = Literal["string", "text", "integer", "number", "float", "boolean", "enum"]
 
 StateVariableType = Literal["string", "integer", "number", "float", "boolean", "enum"]
+CompatibleModelConfidence = Literal["full", "partial", "untested"]
+HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
 
 
 class ManifestSection(BaseModel):
@@ -109,9 +111,38 @@ class CommandEntry(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     label: str = Field(min_length=1)
-    send: str = Field(min_length=1)
     help: str | None = None
     params: dict[str, ParamEntry] = Field(default_factory=dict)
+    send: str | None = Field(default=None, min_length=1)
+    method: HttpMethod | None = None
+    path: str | None = Field(default=None, min_length=1)
+    body: str | None = None
+    headers: dict[str, str] | None = None
+    query_params: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def _validate_command_shape(self) -> CommandEntry:
+        has_send = self.send is not None
+        has_method = self.method is not None
+        has_path = self.path is not None
+        has_http = has_method or has_path
+
+        if has_send and has_http:
+            msg = "CommandEntry cannot mix `send` with HTTP fields"
+            raise ValueError(msg)
+        if not has_send and not has_http:
+            msg = "CommandEntry must declare either `send` or `method`+`path`"
+            raise ValueError(msg)
+        if has_http and (not has_method or not has_path):
+            msg = "HTTP CommandEntry requires both `method` and `path`"
+            raise ValueError(msg)
+        if has_send and (
+            self.body is not None or self.headers is not None or self.query_params is not None
+        ):
+            msg = "CommandEntry with `send` cannot set HTTP-only fields"
+            raise ValueError(msg)
+
+        return self
 
 
 class CommandsSection(BaseModel):
@@ -171,6 +202,42 @@ class PollingSection(BaseModel):
 
     queries: tuple[str, ...] = ()
     inferred_poll_interval: int | None = None
+
+
+class DiscoverySection(BaseModel):
+    """OpenAVC discovery hints that can be statically inferred."""
+
+    model_config = ConfigDict(frozen=True)
+
+    port_open: tuple[int, ...] = ()
+    manufacturer_alias: tuple[str, ...] = ()
+
+
+class CompatibleModelEntry(BaseModel):
+    """A specific group of device models supported by the driver."""
+
+    model_config = ConfigDict(frozen=True)
+
+    manufacturer: str = Field(min_length=1)
+    models: tuple[str, ...] = Field(min_length=1)
+    confidence: CompatibleModelConfidence
+    notes: str | None = None
+
+
+class CompatibleModelsSection(BaseModel):
+    """OpenAVC compatible_models entries extracted from Companion products."""
+
+    model_config = ConfigDict(frozen=True)
+
+    compatible_models: tuple[CompatibleModelEntry, ...] = ()
+
+
+class OnConnectSection(BaseModel):
+    """Static commands sent immediately after connecting to the device."""
+
+    model_config = ConfigDict(frozen=True)
+
+    commands: tuple[str, ...] = ()
 
 
 class HelpSection(BaseModel):

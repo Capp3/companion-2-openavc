@@ -40,3 +40,7 @@ def test_bmd_webpresenter_stream_commands_golden(
     snapshot: Any,
 ) -> None:
     assert _snapshot_payload(bmd_webpresenter, bmd_subset=True) == snapshot
+
+
+def test_http_device_commands_golden(http_device: Path, snapshot: Any) -> None:
+    assert _snapshot_payload(http_device) == snapshot

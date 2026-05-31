@@ -52,12 +52,18 @@ def test_inspect_eligible_prints_manifest_metadata(dummy_device: Path) -> None:
     assert "Polling: 2 queries" in result.stdout
     assert "  poll_interval: 5 (config)" in result.stdout
     assert '  "QUERY INPUT\\n"' in result.stdout
+    assert "Discovery:" in result.stdout
+    assert "  port_open: [5000]" in result.stdout
+    assert '  manufacturer_alias: ["Generic"]' in result.stdout
+    assert "On-connect: 0 commands" in result.stdout
+    assert "Compatible models: 1 entry" in result.stdout
+    assert '  Generic: ["Dummy Model A"] (untested)' in result.stdout
     assert "Help:" in result.stdout
     assert (
         "  overview: Connect to the dummy device on the configured host and port." in result.stdout
     )
     assert "  setup: ## Setup" in result.stdout
-    assert "Review flags: 4" in result.stdout
+    assert "Review flags: 6" in result.stdout
 
 
 def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path) -> None:
@@ -90,10 +96,54 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert "Polling: 1 queries" in result.stdout
     assert "  poll_interval: 1 (inferred)" in result.stdout
     assert '  "STREAM STATE:\\n\\n"' in result.stdout
+    assert "Discovery:" in result.stdout
+    assert "  port_open: [9977]" in result.stdout
+    assert '  manufacturer_alias: ["Blackmagic Design", "Blackmagic"]' in result.stdout
+    assert "On-connect: 0 commands" in result.stdout
+    assert "Compatible models: 1 entry" in result.stdout
+    assert '  Blackmagic Design: ["WebPresenter HD", "WebPresenter 4K"] (untested)' in result.stdout
     assert "Help:" in result.stdout
     assert "  overview: Module to control and monitor the [Blackmagic" in result.stdout
-    assert "Review flags: 19" in result.stdout
+    assert "Review flags: 21" in result.stdout
     assert "[id_coerced] id -" in result.stdout
+
+
+def test_inspect_static_on_connect_prints_on_connect_commands(static_on_connect: Path) -> None:
+    result = CliRunner().invoke(app, ["inspect", str(static_on_connect)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert "  id: static_on_connect" in result.stdout
+    assert "  manufacturer: Vendor X" in result.stdout
+    assert "Config fields: 2" in result.stdout
+    assert "  port: integer (default: 6000)" in result.stdout
+    assert "Discovery:" in result.stdout
+    assert "  port_open: [6000]" in result.stdout
+    assert '  manufacturer_alias: ["Vendor X", "Vendor"]' in result.stdout
+    assert "On-connect: 2 commands" in result.stdout
+    assert '  "HELLO\\n"' in result.stdout
+    assert '  "INIT\\n"' in result.stdout
+    assert "Compatible models: 1 entry" in result.stdout
+    assert '  Vendor X: ["X1"] (untested)' in result.stdout
+
+
+def test_inspect_http_device_prints_http_command_previews(http_device: Path) -> None:
+    result = CliRunner().invoke(app, ["inspect", str(http_device)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert result.stdout.splitlines()[0] == "Eligibility: eligible"
+    assert "  id: http_device" in result.stdout
+    assert "Transport: http" in result.stdout
+    assert "Config fields: 2" in result.stdout
+    assert '  host: string (default: "192.168.1.20")' in result.stdout
+    assert "  port: integer (default: 80)" in result.stdout
+    assert "Commands: 3" in result.stdout
+    assert "  get_status: GET /api/status" in result.stdout
+    assert "  post_event: POST /api/event" in result.stdout
+    assert "  send_xml: POST /api/payload" in result.stdout
+    assert "Discovery:" in result.stdout
+    assert '  manufacturer_alias: ["Generic"]' in result.stdout
+    assert "Compatible models: 1 entry" in result.stdout
+    assert '  Generic: ["HTTP-1"] (untested)' in result.stdout
 
 
 def test_inspect_unknown_vendor_emits_review_flag(unknown_vendor: Path) -> None:
@@ -108,7 +158,10 @@ def test_inspect_unknown_vendor_emits_review_flag(unknown_vendor: Path) -> None:
     assert "Config fields: 0" in result.stdout
     assert "State variables: 0" in result.stdout
     assert "Commands: 0" in result.stdout
-    assert "Review flags: 1" in result.stdout
+    assert "Discovery:" in result.stdout
+    assert '  manufacturer_alias: ["Blackmagic Designs", "Blackmagic"]' in result.stdout
+    assert "Compatible models: 1 entry" in result.stdout
+    assert "Review flags: 3" in result.stdout
     assert "[unknown_manufacturer] manufacturer -" in result.stdout
 
 
@@ -147,7 +200,9 @@ def test_inspect_tcp_fixture_without_delimiter_evidence_uses_default(tmp_path: P
     assert "Config fields: 0" in result.stdout
     assert "State variables: 0" in result.stdout
     assert "Commands: 0" in result.stdout
-    assert "Review flags: 0" in result.stdout
+    assert "Discovery:" in result.stdout
+    assert "Compatible models: 0 entries" in result.stdout
+    assert "Review flags: 1" in result.stdout
 
 
 def test_inspect_eligible_with_invalid_manifest_exits_one(tmp_path: Path) -> None:
@@ -180,11 +235,11 @@ def test_inspect_eligible_with_invalid_manifest_exits_one(tmp_path: Path) -> Non
     assert "manifest.json" in result.stderr
 
 
-def test_inspect_rejects_non_local_source() -> None:
+def test_inspect_rejects_missing_path_with_separator() -> None:
     result = CliRunner().invoke(
         app,
-        ["inspect", "https://github.com/bitfocus/companion-module-x"],
+        ["inspect", "not/a/directory"],
     )
 
     assert result.exit_code == 1
-    assert "M13" in result.stderr
+    assert "Source is not a directory" in result.stderr

@@ -91,3 +91,9 @@ def test_unknown_vendor_is_eligible(unknown_vendor: Path) -> None:
     gate = assess_module(parse_module(unknown_vendor))
     assert gate.eligible is True
     assert gate.blockers == ()
+
+
+def test_http_device_is_eligible(http_device: Path) -> None:
+    gate = assess_module(parse_module(http_device))
+    assert gate.eligible is True
+    assert gate.blockers == ()

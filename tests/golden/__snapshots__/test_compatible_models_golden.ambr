@@ -1,0 +1,74 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_compatible_models_golden
+  dict({
+    'compatible_models': dict({
+      'compatible_models': tuple(
+        dict({
+          'confidence': 'untested',
+          'manufacturer': 'Blackmagic Design',
+          'models': tuple(
+            'WebPresenter HD',
+            'WebPresenter 4K',
+          ),
+        }),
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.COMPATIBLE_MODELS_CONFIDENCE: 'compatible_models_confidence'>,
+        'details': dict({
+        }),
+        'field': 'compatible_models',
+        'message': 'Compatible model entries are derived from Companion manifest products and default to untested confidence.',
+      }),
+    ]),
+  })
+# ---
+# name: test_dummy_compatible_models_golden
+  dict({
+    'compatible_models': dict({
+      'compatible_models': tuple(
+        dict({
+          'confidence': 'untested',
+          'manufacturer': 'Generic',
+          'models': tuple(
+            'Dummy Model A',
+          ),
+        }),
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.COMPATIBLE_MODELS_CONFIDENCE: 'compatible_models_confidence'>,
+        'details': dict({
+        }),
+        'field': 'compatible_models',
+        'message': 'Compatible model entries are derived from Companion manifest products and default to untested confidence.',
+      }),
+    ]),
+  })
+# ---
+# name: test_static_on_connect_compatible_models_golden
+  dict({
+    'compatible_models': dict({
+      'compatible_models': tuple(
+        dict({
+          'confidence': 'untested',
+          'manufacturer': 'Vendor X',
+          'models': tuple(
+            'X1',
+          ),
+        }),
+      ),
+    }),
+    'review': list([
+      dict({
+        'code': <ReviewCode.COMPATIBLE_MODELS_CONFIDENCE: 'compatible_models_confidence'>,
+        'details': dict({
+        }),
+        'field': 'compatible_models',
+        'message': 'Compatible model entries are derived from Companion manifest products and default to untested confidence.',
+      }),
+    ]),
+  })
+# ---
