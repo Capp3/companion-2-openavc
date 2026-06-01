@@ -18,6 +18,7 @@ def test_review_code_catalogue() -> None:
         "state_dependent_branch",
         "missing_discovery_fingerprint",
         "compatible_models_confidence",
+        "simulator_auto",
     ]
 
 

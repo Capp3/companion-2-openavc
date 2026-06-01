@@ -26,6 +26,7 @@ ConfigFieldType = Literal["string", "text", "integer", "number", "float", "boole
 StateVariableType = Literal["string", "integer", "number", "float", "boolean", "enum"]
 CompatibleModelConfidence = Literal["full", "partial", "untested"]
 HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
+SimulatorControlType = Literal["toggle", "slider", "select", "indicator"]
 
 
 class ManifestSection(BaseModel):
@@ -238,6 +239,81 @@ class OnConnectSection(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     commands: tuple[str, ...] = ()
+
+
+class SimulatorControl(BaseModel):
+    """A single declarative simulator UI control."""
+
+    model_config = ConfigDict(frozen=True)
+
+    type: SimulatorControlType
+    key: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    min: int | float | None = None
+    max: int | float | None = None
+    step: int | None = None
+    options: tuple[str, ...] | None = None
+
+    @model_validator(mode="after")
+    def _validate_control_shape(self) -> SimulatorControl:
+        has_range = self.min is not None or self.max is not None or self.step is not None
+        has_options = self.options is not None
+
+        if self.type == "slider":
+            if self.min is None or self.max is None:
+                msg = "Simulator slider controls require both `min` and `max`"
+                raise ValueError(msg)
+            if has_options:
+                msg = "Simulator slider controls cannot declare `options`"
+                raise ValueError(msg)
+            return self
+
+        if self.type == "select":
+            if not self.options:
+                msg = "Simulator select controls require non-empty `options`"
+                raise ValueError(msg)
+            if has_range:
+                msg = "Simulator select controls cannot declare range fields"
+                raise ValueError(msg)
+            return self
+
+        if has_range:
+            msg = f"Simulator {self.type} controls cannot declare range fields"
+            raise ValueError(msg)
+        if has_options:
+            msg = f"Simulator {self.type} controls cannot declare `options`"
+            raise ValueError(msg)
+        return self
+
+
+class SimulatorCommandHandler(BaseModel):
+    """A single simulator command handler generated from a command."""
+
+    model_config = ConfigDict(frozen=True)
+
+    receive: str | None = None
+    match: str | None = None
+    respond: str | None = None
+    set_state: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _validate_handler_shape(self) -> SimulatorCommandHandler:
+        has_receive = self.receive is not None
+        has_match = self.match is not None
+        if has_receive == has_match:
+            msg = "SimulatorCommandHandler requires exactly one of `receive` or `match`"
+            raise ValueError(msg)
+        return self
+
+
+class SimulatorSection(BaseModel):
+    """Auto-generated Level 0+ simulator content."""
+
+    model_config = ConfigDict(frozen=True)
+
+    initial_state: dict[str, Any] | None = None
+    controls: tuple[SimulatorControl, ...] | None = None
+    command_handlers: tuple[SimulatorCommandHandler, ...] | None = None
 
 
 class HelpSection(BaseModel):

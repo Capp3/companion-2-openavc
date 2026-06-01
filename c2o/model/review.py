@@ -19,6 +19,7 @@ class ReviewCode(StrEnum):
     STATE_DEPENDENT_BRANCH = "state_dependent_branch"
     MISSING_DISCOVERY_FINGERPRINT = "missing_discovery_fingerprint"
     COMPATIBLE_MODELS_CONFIDENCE = "compatible_models_confidence"
+    SIMULATOR_AUTO = "simulator_auto"
 
 
 class ReviewFlag(BaseModel):

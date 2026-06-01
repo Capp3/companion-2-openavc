@@ -24,6 +24,7 @@ from c2o.extract import (
     OnConnectExtractionError,
     PollingExtractionError,
     ResponsesExtractionError,
+    SimulatorExtractionError,
     StateVariablesExtractionError,
     TransportExtractionError,
     extract_commands,
@@ -35,6 +36,7 @@ from c2o.extract import (
     extract_on_connect,
     extract_polling,
     extract_responses,
+    extract_simulator,
     extract_state_variables,
     extract_transport,
 )
@@ -129,6 +131,16 @@ def _render_string_list(values: tuple[str, ...]) -> str:
 
 def _render_int_list(values: tuple[int, ...]) -> str:
     return "[" + ", ".join(str(value) for value in values) + "]"
+
+
+def _render_simulator_handler_preview(receive: str | None, match: str | None) -> str:
+    if receive is not None:
+        preview = receive if len(receive) <= 40 else receive[:37] + "..."
+        return f'receive "{_escape_query_preview(preview)}"'
+    if match is not None:
+        preview = match if len(match) <= 40 else match[:37] + "..."
+        return f"match {preview}"
+    return "<empty>"
 
 
 def _plural(count: int, singular: str, plural: str) -> str:
@@ -277,6 +289,27 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
         typer.echo("Help:")
         typer.echo(f"  overview: {_preview_text(help_section.overview)}")
         typer.echo(f"  setup: {_preview_text(help_section.setup)}")
+        try:
+            simulator, simulator_review = extract_simulator(state_variables, commands)
+        except SimulatorExtractionError as exc:
+            typer.echo(f"Simulator extraction failed: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        review = ReviewReport(flags=review.flags + simulator_review.flags)
+        initial_state_count = len(simulator.initial_state or {})
+        controls_count = len(simulator.controls or ())
+        handlers_count = len(simulator.command_handlers or ())
+        typer.echo("Simulator:")
+        typer.echo(f"  initial_state: {initial_state_count} entries")
+        typer.echo(f"  controls: {controls_count}")
+        typer.echo(f"  command_handlers: {handlers_count}")
+        for handler in (simulator.command_handlers or ())[:3]:
+            typer.echo(
+                "  "
+                + _render_simulator_handler_preview(
+                    receive=handler.receive,
+                    match=handler.match,
+                )
+            )
         typer.echo(f"Review flags: {len(review)}")
         for flag in review.flags[:3]:
             typer.echo(f"  [{flag.code.value}] {flag.field} - {flag.message}")

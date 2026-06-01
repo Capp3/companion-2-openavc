@@ -25,6 +25,10 @@ from c2o.model.driver import (
     ResponseEntry,
     ResponseMappingEntry,
     ResponsesSection,
+    SimulatorCommandHandler,
+    SimulatorControl,
+    SimulatorControlType,
+    SimulatorSection,
     StateVariableEntry,
     StateVariablesSection,
     StateVariableType,
@@ -377,6 +381,98 @@ def test_on_connect_section_round_trip() -> None:
 
     assert section.model_dump(exclude_none=True) == {
         "commands": ("HELLO\n", "INIT\n"),
+    }
+
+
+def test_simulator_control_type_literal_matches_auto_generated_shapes() -> None:
+    assert get_args(SimulatorControlType) == ("toggle", "slider", "select", "indicator")
+
+
+def test_simulator_control_round_trips_toggle() -> None:
+    control = SimulatorControl(type="toggle", key="mute", label="Mute")
+
+    assert control.model_dump(exclude_none=True) == {
+        "type": "toggle",
+        "key": "mute",
+        "label": "Mute",
+    }
+
+
+def test_simulator_control_round_trips_slider() -> None:
+    control = SimulatorControl(type="slider", key="volume", label="Volume", min=0, max=100, step=1)
+
+    assert control.model_dump(exclude_none=True) == {
+        "type": "slider",
+        "key": "volume",
+        "label": "Volume",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+    }
+
+
+def test_simulator_control_round_trips_select() -> None:
+    control = SimulatorControl(
+        type="select",
+        key="input",
+        label="Input",
+        options=("HDMI1", "HDMI2"),
+    )
+
+    assert control.model_dump(exclude_none=True) == {
+        "type": "select",
+        "key": "input",
+        "label": "Input",
+        "options": ("HDMI1", "HDMI2"),
+    }
+
+
+def test_simulator_control_rejects_invalid_shape_fields() -> None:
+    with pytest.raises(ValidationError):
+        SimulatorControl(type="slider", key="volume", label="Volume", min=0)
+
+    with pytest.raises(ValidationError):
+        SimulatorControl(type="select", key="input", label="Input")
+
+    with pytest.raises(ValidationError):
+        SimulatorControl(type="indicator", key="label", label="Label", options=("A",))
+
+
+def test_simulator_command_handler_accepts_receive_or_match_shape() -> None:
+    literal = SimulatorCommandHandler(receive="STREAM START", respond="STREAM START\n")
+    regex = SimulatorCommandHandler(match=r"SET INPUT (\d+)", respond="SET INPUT {1}\n")
+
+    assert literal.model_dump(exclude_none=True) == {
+        "receive": "STREAM START",
+        "respond": "STREAM START\n",
+    }
+    assert regex.model_dump(exclude_none=True) == {
+        "match": r"SET INPUT (\d+)",
+        "respond": "SET INPUT {1}\n",
+    }
+
+
+def test_simulator_command_handler_rejects_missing_or_mixed_match_shape() -> None:
+    with pytest.raises(ValidationError):
+        SimulatorCommandHandler(respond="OK")
+
+    with pytest.raises(ValidationError):
+        SimulatorCommandHandler(receive="X", match="X", respond="X")
+
+
+def test_simulator_section_round_trip_omits_empty_subsections() -> None:
+    empty = SimulatorSection()
+    populated = SimulatorSection(
+        initial_state={"mute": False},
+        controls=(SimulatorControl(type="toggle", key="mute", label="Mute"),),
+        command_handlers=(SimulatorCommandHandler(receive="MUTE ON", respond="MUTE ON\n"),),
+    )
+
+    assert empty.model_dump(exclude_none=True) == {}
+    assert populated.model_dump(exclude_none=True) == {
+        "initial_state": {"mute": False},
+        "controls": ({"type": "toggle", "key": "mute", "label": "Mute"},),
+        "command_handlers": ({"receive": "MUTE ON", "respond": "MUTE ON\n"},),
     }
 
 

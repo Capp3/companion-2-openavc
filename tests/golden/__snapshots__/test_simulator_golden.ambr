@@ -1,0 +1,218 @@
+# serializer version: 1
+# name: test_bmd_webpresenter_simulator_golden
+  dict({
+    'review': list([
+      dict({
+        'code': <ReviewCode.SIMULATOR_AUTO: 'simulator_auto'>,
+        'details': dict({
+        }),
+        'field': 'simulator',
+        'message': 'The simulator block was auto-generated from state variables and commands. All entries require human review before the driver is considered production-ready.',
+      }),
+    ]),
+    'simulator': dict({
+      'controls': tuple(
+        dict({
+          'key': 'model',
+          'label': 'Device Model',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'label',
+          'label': 'Device Label',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'software',
+          'label': 'Device Software',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'video_mode',
+          'label': 'Video Mode',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'platform',
+          'label': 'Platform',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'server',
+          'label': 'Server',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'key',
+          'label': 'Stream Key',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'quality',
+          'label': 'Stream Quality',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_state',
+          'label': 'Streaming State',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_duration',
+          'label': 'Streaming Duration',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_duration_HH',
+          'label': 'Streaming Duration (Hours)',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_duration_MM',
+          'label': 'Streaming Duration (Minutes)',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_duration_SS',
+          'label': 'Streaming Duration (Seconds)',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'stream_bitrate',
+          'label': 'Stream Bitrate',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'cache',
+          'label': 'Cache Used',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'passphrase',
+          'label': 'Passphrase',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'URL',
+          'label': 'Current URL',
+          'type': 'indicator',
+        }),
+      ),
+      'initial_state': dict({
+        'URL': '',
+        'cache': '',
+        'key': '',
+        'label': '',
+        'model': '',
+        'passphrase': '',
+        'platform': '',
+        'quality': '',
+        'server': '',
+        'software': '',
+        'stream_bitrate': '',
+        'stream_duration': '',
+        'stream_duration_HH': '',
+        'stream_duration_MM': '',
+        'stream_duration_SS': '',
+        'stream_state': '',
+        'video_mode': '',
+      }),
+    }),
+  })
+# ---
+# name: test_dummy_simulator_golden
+  dict({
+    'review': list([
+      dict({
+        'code': <ReviewCode.SIMULATOR_AUTO: 'simulator_auto'>,
+        'details': dict({
+        }),
+        'field': 'simulator',
+        'message': 'The simulator block was auto-generated from state variables and commands. All entries require human review before the driver is considered production-ready.',
+      }),
+    ]),
+    'simulator': dict({
+      'command_handlers': tuple(
+        dict({
+          'match': 'SET INPUT (\\d+)',
+          'respond': '''
+            SET INPUT {1}
+  
+          ''',
+        }),
+        dict({
+          'receive': 'STREAM START',
+          'respond': '''
+            STREAM START
+  
+          ''',
+        }),
+        dict({
+          'receive': 'STREAM STOP',
+          'respond': '''
+            STREAM STOP
+  
+          ''',
+        }),
+        dict({
+          'match': 'CFG (\\S+) (\\S+)',
+          'respond': '''
+            CFG {1} {2}
+  
+          ''',
+        }),
+      ),
+      'controls': tuple(
+        dict({
+          'key': 'device_label',
+          'label': 'Device Label',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'input_level',
+          'label': 'Input Level',
+          'type': 'indicator',
+        }),
+        dict({
+          'key': 'mute_state',
+          'label': 'Mute State',
+          'type': 'toggle',
+        }),
+      ),
+      'initial_state': dict({
+        'device_label': '',
+        'input_level': 0,
+        'mute_state': False,
+      }),
+    }),
+  })
+# ---
+# name: test_http_device_simulator_golden
+  dict({
+    'review': list([
+      dict({
+        'code': <ReviewCode.SIMULATOR_AUTO: 'simulator_auto'>,
+        'details': dict({
+        }),
+        'field': 'simulator',
+        'message': 'The simulator block was auto-generated from state variables and commands. All entries require human review before the driver is considered production-ready.',
+      }),
+    ]),
+    'simulator': dict({
+      'command_handlers': tuple(
+        dict({
+          'match': 'GET /api/status.*',
+          'respond': '{}',
+        }),
+        dict({
+          'match': 'POST /api/event.*',
+          'respond': '{"ok": true}',
+        }),
+        dict({
+          'match': 'POST /api/payload.*',
+          'respond': '{"ok": true}',
+        }),
+      ),
+    }),
+  })
+# ---

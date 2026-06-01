@@ -17,6 +17,7 @@ from c2o.extract.manifest import (
 from c2o.extract.on_connect import OnConnectExtractionError, extract_on_connect
 from c2o.extract.polling import PollingExtractionError, extract_polling
 from c2o.extract.responses import ResponsesExtractionError, extract_responses
+from c2o.extract.simulator import SimulatorExtractionError, extract_simulator
 from c2o.extract.state_variables import StateVariablesExtractionError, extract_state_variables
 from c2o.extract.transport import TransportExtractionError, extract_transport
 from c2o.model.driver import (
@@ -38,6 +39,10 @@ from c2o.model.driver import (
     ResponseEntry,
     ResponseMappingEntry,
     ResponsesSection,
+    SimulatorCommandHandler,
+    SimulatorControl,
+    SimulatorControlType,
+    SimulatorSection,
     StateVariableEntry,
     StateVariablesSection,
     StateVariableType,
@@ -74,6 +79,11 @@ __all__ = [
     "ResponsesSection",
     "ResponseEntry",
     "ResponseMappingEntry",
+    "SimulatorCommandHandler",
+    "SimulatorControl",
+    "SimulatorControlType",
+    "SimulatorExtractionError",
+    "SimulatorSection",
     "StateVariablesExtractionError",
     "StateVariablesSection",
     "StateVariableEntry",
@@ -91,5 +101,6 @@ __all__ = [
     "extract_on_connect",
     "extract_polling",
     "extract_state_variables",
+    "extract_simulator",
     "extract_transport",
 ]

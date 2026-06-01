@@ -63,7 +63,13 @@ def test_inspect_eligible_prints_manifest_metadata(dummy_device: Path) -> None:
         "  overview: Connect to the dummy device on the configured host and port." in result.stdout
     )
     assert "  setup: ## Setup" in result.stdout
-    assert "Review flags: 6" in result.stdout
+    assert "Simulator:" in result.stdout
+    assert "  initial_state: 3 entries" in result.stdout
+    assert "  controls: 3" in result.stdout
+    assert "  command_handlers: 4" in result.stdout
+    assert "  match SET INPUT (\\d+)" in result.stdout
+    assert '  receive "STREAM START"' in result.stdout
+    assert "Review flags: 7" in result.stdout
 
 
 def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path) -> None:
@@ -104,7 +110,11 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert '  Blackmagic Design: ["WebPresenter HD", "WebPresenter 4K"] (untested)' in result.stdout
     assert "Help:" in result.stdout
     assert "  overview: Module to control and monitor the [Blackmagic" in result.stdout
-    assert "Review flags: 21" in result.stdout
+    assert "Simulator:" in result.stdout
+    assert "  initial_state: 17 entries" in result.stdout
+    assert "  controls: 17" in result.stdout
+    assert "  command_handlers: 0" in result.stdout
+    assert "Review flags: 22" in result.stdout
     assert "[id_coerced] id -" in result.stdout
 
 
@@ -140,6 +150,13 @@ def test_inspect_http_device_prints_http_command_previews(http_device: Path) -> 
     assert "  get_status: GET /api/status" in result.stdout
     assert "  post_event: POST /api/event" in result.stdout
     assert "  send_xml: POST /api/payload" in result.stdout
+    assert "Simulator:" in result.stdout
+    assert "  initial_state: 0 entries" in result.stdout
+    assert "  controls: 0" in result.stdout
+    assert "  command_handlers: 3" in result.stdout
+    assert "  match GET /api/status.*" in result.stdout
+    assert "  match POST /api/event.*" in result.stdout
+    assert "  match POST /api/payload.*" in result.stdout
     assert "Discovery:" in result.stdout
     assert '  manufacturer_alias: ["Generic"]' in result.stdout
     assert "Compatible models: 1 entry" in result.stdout
