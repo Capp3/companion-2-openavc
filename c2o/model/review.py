@@ -20,6 +20,7 @@ class ReviewCode(StrEnum):
     MISSING_DISCOVERY_FINGERPRINT = "missing_discovery_fingerprint"
     COMPATIBLE_MODELS_CONFIDENCE = "compatible_models_confidence"
     SIMULATOR_AUTO = "simulator_auto"
+    AUTHOR_DEFAULT = "author_default"
 
 
 class ReviewFlag(BaseModel):

@@ -19,6 +19,7 @@ def test_review_code_catalogue() -> None:
         "missing_discovery_fingerprint",
         "compatible_models_confidence",
         "simulator_auto",
+        "author_default",
     ]
 
 

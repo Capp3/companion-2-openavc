@@ -43,6 +43,7 @@ from c2o.extract import (
 from c2o.model.driver import ConfigFieldsSection, PollingSection
 from c2o.model.review import ReviewCode, ReviewReport
 from c2o.parse.js import ParsedModule, parse_module
+from c2o.prompt import Prompter, TyperPrompter, apply_interactive_prompts
 from c2o.registry import Registry, reconcile_manufacturer
 from c2o.source import SourceResolutionError, read_module_id, resolve_source
 from c2o.suitability.blockers import Blocker
@@ -59,6 +60,9 @@ _declined_at_override: datetime | None = None
 
 # Injectable registry for tests; production uses the live upstream-with-vendored-fallback loader.
 _registry_override: Registry | None = None
+
+# Injectable prompter for tests; production uses the Typer-backed implementation.
+_prompter_override: Prompter | None = None
 
 _UNSET = object()
 
@@ -94,6 +98,10 @@ def _source_resolution_exit(exc: SourceResolutionError) -> None:
 
 def _load_registry() -> Registry:
     return _registry_override if _registry_override is not None else Registry.load()
+
+
+def _load_prompter() -> Prompter:
+    return _prompter_override if _prompter_override is not None else TyperPrompter()
 
 
 def _escape_delimiter(value: str) -> str:
@@ -339,6 +347,11 @@ def convert(
         "--keep-temp",
         help="Preserve cloned remote sources after the run for debugging.",
     ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive/--no-interactive",
+        help="Prompt for metadata fields that C2O cannot safely infer.",
+    ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
     _ = lenient
@@ -359,6 +372,25 @@ def convert(
                 write_declined_json(decline_path, report)
                 _decline_stderr(module_id, gate.blockers)
                 raise typer.Exit(code=2)
+
+            if interactive:
+                try:
+                    manifest, review = extract_manifest(root)
+                except ManifestExtractionError as exc:
+                    typer.echo(f"Manifest extraction failed: {exc}", err=True)
+                    raise typer.Exit(code=1) from exc
+                registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
+                review = ReviewReport(flags=review.flags + registry_report.flags)
+                manifest, review = apply_interactive_prompts(
+                    manifest,
+                    review,
+                    prompter=_load_prompter(),
+                )
+                typer.echo("Interactive metadata:")
+                typer.echo(f"  category: {manifest.category}")
+                typer.echo(f"  manufacturer: {manifest.manufacturer}")
+                typer.echo(f"  author: {manifest.author}")
+                typer.echo(f"  unresolved review flags: {len(review)}")
     except SourceResolutionError as exc:
         _source_resolution_exit(exc)
 

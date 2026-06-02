@@ -113,6 +113,16 @@ def extract_manifest(
             )
         )
 
+    author, author_defaulted = _author(manifest)
+    if author_defaulted:
+        flags.append(
+            ReviewFlag(
+                code=ReviewCode.AUTHOR_DEFAULT,
+                field="author",
+                message="Author defaulted to 'Community'; no maintainer name found in manifest.",
+            )
+        )
+
     try:
         section = ManifestSection(
             id=driver_id,
@@ -120,7 +130,7 @@ def extract_manifest(
             manufacturer=_require_string(manifest, "manufacturer", manifest_path),
             category=category,
             version=_require_string(manifest, "version", manifest_path),
-            author=_author(manifest),
+            author=author,
             description=description,
             source_url=_source_url(manifest, source_url_hint),
         )
@@ -161,15 +171,15 @@ def _display_name(manifest: dict[str, Any], manifest_path: Path) -> str:
     return _require_string(manifest, "name", manifest_path)
 
 
-def _author(manifest: dict[str, Any]) -> str:
+def _author(manifest: dict[str, Any]) -> tuple[str, bool]:
     maintainers = manifest.get("maintainers")
     if isinstance(maintainers, list) and maintainers:
         first = maintainers[0]
         if isinstance(first, dict):
             name = first.get("name")
             if isinstance(name, str) and name.strip():
-                return name.strip()
-    return "Community"
+                return name.strip(), False
+    return "Community", True
 
 
 def _category_from_keywords(keywords: list[str]) -> DriverCategory | None:

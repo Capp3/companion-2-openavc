@@ -141,9 +141,20 @@ def test_invalid_version_raises_manifest_extraction_error(tmp_path: Path) -> Non
 def test_author_falls_back_to_community(tmp_path: Path) -> None:
     root = _write_manifest(tmp_path, maintainers=[])
 
-    section, _report = extract_manifest(root)
+    section, report = extract_manifest(root)
 
     assert section.author == "Community"
+    assert report.has_code(ReviewCode.AUTHOR_DEFAULT)
+    assert report.by_code(ReviewCode.AUTHOR_DEFAULT)[0].field == "author"
+
+
+def test_author_maintainer_has_no_default_review_flag(tmp_path: Path) -> None:
+    root = _write_manifest(tmp_path, maintainers=[{"name": "Example Maintainer"}])
+
+    section, report = extract_manifest(root)
+
+    assert section.author == "Example Maintainer"
+    assert not report.has_code(ReviewCode.AUTHOR_DEFAULT)
 
 
 def test_marketing_description_gets_review_flag(tmp_path: Path) -> None:
