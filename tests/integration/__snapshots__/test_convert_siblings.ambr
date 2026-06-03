@@ -1,0 +1,122 @@
+# serializer version: 1
+# name: test_convert_bmd_writes_sibling_yaml_before_strict_failure[feedbacks]
+  '''
+  - id: streaming_state
+    type: boolean
+    name: Device is streaming
+    description: Change background colour based on streaming state
+    default_style:
+      color: 0
+      bgcolor: 52224
+    options:
+    - id: stream_state
+      type: enum
+      label: State
+      default: Streaming
+      values:
+      - Idle
+      - Connecting
+      - Streaming
+      - Interrupted
+  
+  '''
+# ---
+# name: test_convert_bmd_writes_sibling_yaml_before_strict_failure[presets]
+  '''
+  - id: Start
+    type: button
+    category: Streaming
+    name: Start Stream
+    style:
+      text: Start Stream
+      size: auto
+      bgcolor: 0
+      color: 16777215
+    steps:
+    - down:
+      - action_id: stream
+        options:
+          stream_control: Start
+      up: []
+    feedbacks:
+    - feedback_id: streaming_state
+      options:
+        stream_state: Idle
+      style:
+        bgcolor: 0
+        color: 16777215
+    - feedback_id: streaming_state
+      options:
+        stream_state: Connecting
+      style:
+        bgcolor: 16744448
+        color: 16777215
+    - feedback_id: streaming_state
+      options:
+        stream_state: Streaming
+      style:
+        bgcolor: 52224
+        color: 16777215
+  - id: Stop
+    type: button
+    category: Streaming
+    name: Stop Stream
+    style:
+      text: Stop Stream
+      size: auto
+      bgcolor: 0
+      color: 16777215
+    steps:
+    - down:
+      - action_id: stream
+        options:
+          stream_control: Stop
+      up: []
+  - id: Reboot
+    type: button
+    category: Device
+    name: Reboot WebPresenter
+    style:
+      text: Reboot
+      size: auto
+      bgcolor: 0
+      color: 16777215
+    steps:
+    - down:
+      - action_id: device
+        options:
+          device_control: Reboot
+      up: []
+  
+  '''
+# ---
+# name: test_convert_dummy_writes_sibling_yaml_before_strict_failure[feedbacks]
+  '''
+  - id: mute_on
+    type: boolean
+    name: Mute is on
+    default_style:
+      bgcolor: 16711680
+    callback_condition: this.mute_state
+  
+  '''
+# ---
+# name: test_convert_dummy_writes_sibling_yaml_before_strict_failure[presets]
+  '''
+  - id: mute
+    type: button
+    category: Device
+    name: Mute
+    style:
+      text: MUTE
+      size: '14'
+      color: 16777215
+      bgcolor: 16711680
+    steps:
+    - down:
+      - action_id: toggle_mute
+        options: {}
+      up: []
+  
+  '''
+# ---

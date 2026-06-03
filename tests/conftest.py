@@ -15,6 +15,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 # Fixed timestamp for deterministic decline snapshots (§11.4 determinism).
 FROZEN_DECLINED_AT = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+FROZEN_REVIEW_AT = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
 FROZEN_LOG_AT = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
 
 
@@ -99,6 +100,14 @@ def frozen_declined_at(monkeypatch: pytest.MonkeyPatch) -> None:
     import c2o.cli
 
     monkeypatch.setattr(c2o.cli, "_declined_at_override", FROZEN_DECLINED_AT)
+
+
+@pytest.fixture(autouse=True)
+def frozen_review_at(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin review sidecar timestamps across CLI integration tests."""
+    import c2o.emit.review
+
+    monkeypatch.setattr(c2o.emit.review, "_review_at_override", FROZEN_REVIEW_AT)
 
 
 @pytest.fixture(autouse=True)

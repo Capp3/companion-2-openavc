@@ -16,3 +16,73 @@
     'source': '<fixture>',
   })
 # ---
+# name: test_convert_lenient_eligible_dummy_exits_zero
+  dict({
+    'flags': list([
+      dict({
+        'code': 'compatible_models_confidence',
+        'details': dict({
+        }),
+        'field': 'compatible_models',
+        'message': 'Compatible model entries are derived from Companion manifest products and default to untested confidence.',
+      }),
+      dict({
+        'code': 'inferred_state_type',
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'string',
+          'variable_id': 'device_label',
+        }),
+        'field': 'state_variables.device_label',
+        'message': "Type for state variable 'device_label' was inferred as 'string'.",
+      }),
+      dict({
+        'code': 'inferred_state_type',
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'integer',
+          'variable_id': 'input_level',
+        }),
+        'field': 'state_variables.input_level',
+        'message': "Type for state variable 'input_level' was inferred as 'integer'.",
+      }),
+      dict({
+        'code': 'inferred_state_type',
+        'details': dict({
+          'evidence': 'call',
+          'inferred_type': 'boolean',
+          'variable_id': 'mute_state',
+        }),
+        'field': 'state_variables.mute_state',
+        'message': "Type for state variable 'mute_state' was inferred as 'boolean'.",
+      }),
+      dict({
+        'code': 'missing_discovery_fingerprint',
+        'details': dict({
+          'missing': 'mdns,ssdp,amx_ddp,tcp_probe,udp_probe,python,hostname,oui,snmp_pen',
+        }),
+        'field': 'discovery',
+        'message': 'Companion modules do not statically expose mdns/ssdp/amx_ddp/tcp_probe/udp_probe/python/hostname/oui/snmp_pen fingerprints; extend by hand if the device supports them.',
+      }),
+      dict({
+        'code': 'simulator_auto',
+        'details': dict({
+        }),
+        'field': 'simulator',
+        'message': 'The simulator block was auto-generated from state variables and commands. All entries require human review before the driver is considered production-ready.',
+      }),
+      dict({
+        'code': 'state_dependent_branch',
+        'details': dict({
+          'action_key': 'toggle_mute',
+          'reason': 'instance_state',
+        }),
+        'field': 'commands.toggle_mute',
+        'message': "Action 'toggle_mute' contains runtime-state branching that cannot be expressed in YAML.",
+      }),
+    ]),
+    'generated_at': '2026-01-01T00:00:00Z',
+    'module_id': 'dummy_device',
+    'source': '<fixture>',
+  })
+# ---

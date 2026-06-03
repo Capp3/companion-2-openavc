@@ -27,6 +27,9 @@ StateVariableType = Literal["string", "integer", "number", "float", "boolean", "
 CompatibleModelConfidence = Literal["full", "partial", "untested"]
 HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
 SimulatorControlType = Literal["toggle", "slider", "select", "indicator"]
+CompanionFeedbackType = Literal["boolean", "advanced"]
+CompanionPresetType = Literal["button"]
+CompanionStyleValue = int | str | bool | float
 
 
 class ManifestSection(BaseModel):
@@ -314,6 +317,90 @@ class SimulatorSection(BaseModel):
     initial_state: dict[str, Any] | None = None
     controls: tuple[SimulatorControl, ...] | None = None
     command_handlers: tuple[SimulatorCommandHandler, ...] | None = None
+
+
+class CompanionOption(BaseModel):
+    """A Companion option preserved in a sibling artefact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(min_length=1)
+    type: ConfigFieldType | str
+    label: str | None = None
+    default: Any = None
+    values: tuple[str, ...] | None = None
+
+
+class FeedbackEntry(BaseModel):
+    """A Companion feedback definition preserved as informational YAML."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(min_length=1)
+    type: CompanionFeedbackType | str
+    name: str = Field(min_length=1)
+    description: str | None = None
+    default_style: dict[str, CompanionStyleValue] | None = None
+    options: tuple[CompanionOption, ...] = ()
+    callback_condition: str | None = None
+
+
+class FeedbacksSection(BaseModel):
+    """Companion feedback definitions preserved as a sibling artefact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    feedbacks: tuple[FeedbackEntry, ...] = ()
+
+
+class PresetActionRef(BaseModel):
+    """A Companion preset action reference."""
+
+    model_config = ConfigDict(frozen=True)
+
+    action_id: str = Field(min_length=1)
+    options: dict[str, Any] = Field(default_factory=dict)
+
+
+class PresetStep(BaseModel):
+    """A Companion preset step preserving down/up actions."""
+
+    model_config = ConfigDict(frozen=True)
+
+    down: tuple[PresetActionRef, ...] = ()
+    up: tuple[PresetActionRef, ...] = ()
+
+
+class PresetFeedbackRef(BaseModel):
+    """A Companion preset feedback reference."""
+
+    model_config = ConfigDict(frozen=True)
+
+    feedback_id: str = Field(min_length=1)
+    options: dict[str, Any] = Field(default_factory=dict)
+    style: dict[str, CompanionStyleValue] | None = None
+
+
+class PresetEntry(BaseModel):
+    """A Companion preset definition preserved as informational YAML."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(min_length=1)
+    type: CompanionPresetType | str
+    category: str | None = None
+    name: str = Field(min_length=1)
+    style: dict[str, CompanionStyleValue] | None = None
+    steps: tuple[PresetStep, ...] = ()
+    feedbacks: tuple[PresetFeedbackRef, ...] = ()
+
+
+class PresetsSection(BaseModel):
+    """Companion preset definitions preserved as a sibling artefact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    presets: tuple[PresetEntry, ...] = ()
 
 
 class HelpSection(BaseModel):

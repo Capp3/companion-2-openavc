@@ -7,6 +7,7 @@ from c2o.extract.compatible_models import (
 )
 from c2o.extract.config_fields import ConfigFieldsExtractionError, extract_config_fields
 from c2o.extract.discovery import DiscoveryExtractionError, extract_discovery
+from c2o.extract.feedbacks import FeedbacksExtractionError, extract_feedbacks
 from c2o.extract.help import HelpExtractionError, extract_help
 from c2o.extract.http_commands import HttpCommandCandidate, extract_http_command
 from c2o.extract.manifest import (
@@ -16,6 +17,7 @@ from c2o.extract.manifest import (
 )
 from c2o.extract.on_connect import OnConnectExtractionError, extract_on_connect
 from c2o.extract.polling import PollingExtractionError, extract_polling
+from c2o.extract.presets import PresetsExtractionError, extract_presets
 from c2o.extract.responses import ResponsesExtractionError, extract_responses
 from c2o.extract.simulator import SimulatorExtractionError, extract_simulator
 from c2o.extract.state_variables import StateVariablesExtractionError, extract_state_variables
@@ -30,12 +32,19 @@ from c2o.model.driver import (
     ConfigSchemaEntry,
     DiscoverySection,
     DriverTransport,
+    FeedbackEntry,
+    FeedbacksSection,
     HelpSection,
     HttpMethod,
     ManifestSection,
     OnConnectSection,
     ParamEntry,
     PollingSection,
+    PresetActionRef,
+    PresetEntry,
+    PresetFeedbackRef,
+    PresetsSection,
+    PresetStep,
     ResponseEntry,
     ResponseMappingEntry,
     ResponsesSection,
@@ -64,6 +73,9 @@ __all__ = [
     "DiscoveryExtractionError",
     "DiscoverySection",
     "DriverTransport",
+    "FeedbackEntry",
+    "FeedbacksExtractionError",
+    "FeedbacksSection",
     "HelpExtractionError",
     "HelpSection",
     "HttpCommandCandidate",
@@ -75,6 +87,12 @@ __all__ = [
     "ParamEntry",
     "PollingExtractionError",
     "PollingSection",
+    "PresetActionRef",
+    "PresetEntry",
+    "PresetFeedbackRef",
+    "PresetsExtractionError",
+    "PresetsSection",
+    "PresetStep",
     "ResponsesExtractionError",
     "ResponsesSection",
     "ResponseEntry",
@@ -95,11 +113,13 @@ __all__ = [
     "extract_compatible_models",
     "extract_config_fields",
     "extract_discovery",
+    "extract_feedbacks",
     "extract_help",
     "extract_http_command",
     "extract_manifest",
     "extract_on_connect",
     "extract_polling",
+    "extract_presets",
     "extract_state_variables",
     "extract_simulator",
     "extract_transport",

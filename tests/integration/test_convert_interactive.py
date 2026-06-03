@@ -26,7 +26,7 @@ def _copy_with_promptable_manifest(source: Path, tmp_path: Path) -> Path:
     return root
 
 
-def test_convert_interactive_accepts_metadata_over_stdin(
+def test_convert_interactive_resolves_metadata_then_strict_fails_on_remaining_flags(
     dummy_device: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -41,14 +41,15 @@ def test_convert_interactive_accepts_metadata_over_stdin(
         input="6\n1\n\n",
     )
 
-    assert result.exit_code == 0, result.stdout + result.stderr
+    assert result.exit_code == 1, result.stdout + result.stderr
     assert "Interactive metadata:" in result.stdout
     assert "  category: video" in result.stdout
     assert "  manufacturer: Blackmagic Design" in result.stdout
     assert "  author: Community" in result.stdout
     assert "  unresolved review flags: 0" in result.stdout
-    assert "M4+" in result.stderr
+    assert "Strict mode: conversion requires 7 review flag(s) to be resolved." in result.stderr
     assert not out_avc.exists()
+    assert not (tmp_path / "out.review.json").exists()
 
 
 def test_convert_interactive_declined_module_does_not_prompt(

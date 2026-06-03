@@ -6,9 +6,10 @@ import json
 import logging
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
@@ -18,15 +19,24 @@ from c2o.emit.decline import (
     declined_json_path_for_output,
     write_declined_json,
 )
+from c2o.emit.review import build_review_sidecar, review_json_path_for_output, write_review_json
+from c2o.emit.siblings import (
+    feedbacks_yml_path_for_output,
+    presets_yml_path_for_output,
+    write_feedbacks_yml,
+    write_presets_yml,
+)
 from c2o.extract import (
     CommandsExtractionError,
     CompatibleModelsExtractionError,
     ConfigFieldsExtractionError,
     DiscoveryExtractionError,
+    FeedbacksExtractionError,
     HelpExtractionError,
     ManifestExtractionError,
     OnConnectExtractionError,
     PollingExtractionError,
+    PresetsExtractionError,
     ResponsesExtractionError,
     SimulatorExtractionError,
     StateVariablesExtractionError,
@@ -35,10 +45,12 @@ from c2o.extract import (
     extract_compatible_models,
     extract_config_fields,
     extract_discovery,
+    extract_feedbacks,
     extract_help,
     extract_manifest,
     extract_on_connect,
     extract_polling,
+    extract_presets,
     extract_responses,
     extract_simulator,
     extract_state_variables,
@@ -50,16 +62,18 @@ from c2o.model.driver import (
     CompatibleModelsSection,
     ConfigFieldsSection,
     DiscoverySection,
+    FeedbacksSection,
     HelpSection,
     ManifestSection,
     OnConnectSection,
     PollingSection,
+    PresetsSection,
     ResponsesSection,
     SimulatorSection,
     StateVariablesSection,
     TransportSection,
 )
-from c2o.model.review import ReviewCode, ReviewReport
+from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
 from c2o.parse.js import ParsedModule, parse_module
 from c2o.prompt import Prompter, TyperPrompter, apply_interactive_prompts
 from c2o.registry import Registry, reconcile_manufacturer
@@ -85,6 +99,26 @@ _prompter_override: Prompter | None = None
 
 _UNSET = object()
 _LOGGER = logging.getLogger("c2o")
+
+
+@dataclass(frozen=True)
+class ExtractedModuleSections:
+    """Sections and review flags produced by the eligible extractor pipeline."""
+
+    manifest: ManifestSection
+    registry_report: ReviewReport
+    compatible_models: CompatibleModelsSection
+    transport: TransportSection
+    config_fields: ConfigFieldsSection
+    state_variables: StateVariablesSection
+    commands: CommandsSection
+    responses: ResponsesSection
+    polling: PollingSection
+    discovery: DiscoverySection
+    on_connect: OnConnectSection
+    help_section: HelpSection
+    simulator: SimulatorSection
+    review: ReviewReport
 
 
 @app.callback()
@@ -126,6 +160,68 @@ def _decline_stderr(module_id: str, blockers: tuple[Blocker, ...]) -> None:
     typer.echo(
         "Recommendation: author an OpenAVC Python driver per upstream AGENTS.md §3.",
         err=True,
+    )
+
+
+def _resolve_conversion_mode(*, strict: bool, lenient: bool) -> Literal["strict", "lenient"]:
+    if strict and lenient:
+        raise typer.BadParameter("--strict and --lenient cannot be used together")
+    return "lenient" if lenient else "strict"
+
+
+def _sorted_review_flags(review: ReviewReport) -> list[ReviewFlag]:
+    return sorted(review.flags, key=lambda flag: (flag.code.value, flag.field))
+
+
+def _strict_failure_stderr(review: ReviewReport) -> None:
+    typer.echo(
+        f"Strict mode: conversion requires {len(review)} review flag(s) to be resolved.",
+        err=True,
+    )
+    for flag in _sorted_review_flags(review):
+        typer.echo(f"  - [{flag.code.value}] {flag.field}: {flag.message}", err=True)
+
+
+def _apply_review_policy(
+    mode: Literal["strict", "lenient"],
+    review: ReviewReport,
+    *,
+    out_path: Path,
+    source: str,
+    module_id: str,
+) -> None:
+    if mode == "strict":
+        if len(review) > 0:
+            first_flag = _sorted_review_flags(review)[0]
+            emit(
+                _LOGGER,
+                logging.INFO,
+                "conversion_strict_failed",
+                module_id=module_id,
+                review_count=len(review),
+                first_flag_code=first_flag.code.value,
+            )
+            _strict_failure_stderr(review)
+            raise typer.Exit(code=1)
+        typer.echo(
+            "Eligible for conversion; YAML emitter not yet implemented (M22+). "
+            "No .avcdriver was written.",
+            err=True,
+        )
+        return
+
+    if len(review) == 0:
+        return
+
+    review_path = review_json_path_for_output(out_path)
+    report = build_review_sidecar(source=source, module_id=module_id, review=review)
+    write_review_json(review_path, report)
+    emit(
+        _LOGGER,
+        logging.INFO,
+        "output_write",
+        path=str(review_path),
+        bytes=review_path.stat().st_size,
     )
 
 
@@ -302,10 +398,12 @@ def _extract_or_exit[T](
         CompatibleModelsExtractionError,
         ConfigFieldsExtractionError,
         DiscoveryExtractionError,
+        FeedbacksExtractionError,
         HelpExtractionError,
         ManifestExtractionError,
         OnConnectExtractionError,
         PollingExtractionError,
+        PresetsExtractionError,
         ResponsesExtractionError,
         SimulatorExtractionError,
         StateVariablesExtractionError,
@@ -449,6 +547,54 @@ def _simulator_log_summary(
     }, len(review)
 
 
+def _feedbacks_log_summary(
+    result: tuple[FeedbacksSection, ReviewReport],
+) -> tuple[dict[str, object], int]:
+    feedbacks, review = result
+    return {"feedbacks": len(feedbacks.feedbacks)}, len(review)
+
+
+def _presets_log_summary(
+    result: tuple[PresetsSection, ReviewReport],
+) -> tuple[dict[str, object], int]:
+    presets, review = result
+    return {"presets": len(presets.presets)}, len(review)
+
+
+def _write_sibling_artifacts(parsed: ParsedModule, out_path: Path) -> None:
+    feedbacks, _feedback_review = _extract_or_exit(
+        "Feedbacks",
+        lambda: extract_feedbacks(parsed),
+        summary=_feedbacks_log_summary,
+    )
+    if feedbacks.feedbacks:
+        feedbacks_path = feedbacks_yml_path_for_output(out_path)
+        write_feedbacks_yml(feedbacks_path, feedbacks)
+        emit(
+            _LOGGER,
+            logging.INFO,
+            "output_write",
+            path=str(feedbacks_path),
+            bytes=feedbacks_path.stat().st_size,
+        )
+
+    presets, _preset_review = _extract_or_exit(
+        "Presets",
+        lambda: extract_presets(parsed),
+        summary=_presets_log_summary,
+    )
+    if presets.presets:
+        presets_path = presets_yml_path_for_output(out_path)
+        write_presets_yml(presets_path, presets)
+        emit(
+            _LOGGER,
+            logging.INFO,
+            "output_write",
+            path=str(presets_path),
+            bytes=presets_path.stat().st_size,
+        )
+
+
 def _render_metadata(manifest: ManifestSection) -> None:
     typer.echo("Metadata:")
     typer.echo(f"  id: {manifest.id}")
@@ -575,18 +721,24 @@ def _render_review_flags(review: ReviewReport) -> None:
         typer.echo(f"  [{flag.code.value}] {flag.field} - {flag.message}")
 
 
-def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
-    typer.echo("Eligibility: eligible")
-    typer.echo(f"Module: {module_id}")
-    typer.echo("Ready for extraction: yes")
-
-    manifest, review = _extract_or_exit(
-        "Manifest",
-        lambda: extract_manifest(root),
-        summary=_manifest_log_summary,
-    )
-    registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
-    review = _merge_review(review, registry_report)
+def _extract_module_sections(
+    root: Path,
+    parsed: ParsedModule,
+    *,
+    manifest: ManifestSection | None = None,
+    review: ReviewReport | None = None,
+) -> ExtractedModuleSections:
+    if manifest is None:
+        manifest, review = _extract_or_exit(
+            "Manifest",
+            lambda: extract_manifest(root),
+            summary=_manifest_log_summary,
+        )
+        registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
+        review = _merge_review(review, registry_report)
+    else:
+        review = review or ReviewReport()
+        registry_report = ReviewReport()
 
     compatible_models, cm_review = _extract_or_exit(
         "Compatible models",
@@ -595,22 +747,17 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
     )
     review = _merge_review(review, cm_review)
 
-    _render_metadata(manifest)
-    _render_manufacturer_match(registry_report)
-
     transport = _extract_or_exit(
         "Transport",
         lambda: extract_transport(parsed),
         summary=_transport_log_summary,
     )
-    _render_transport_section(transport)
 
     config_fields = _extract_or_exit(
         "Config fields",
         lambda: extract_config_fields(parsed),
         summary=_config_fields_log_summary,
     )
-    _render_config_fields_section(config_fields)
 
     state_variables, sv_review = _extract_or_exit(
         "State variables",
@@ -618,7 +765,6 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         summary=_state_variables_log_summary,
     )
     review = _merge_review(review, sv_review)
-    _render_state_variables_section(state_variables)
 
     commands, cmd_review = _extract_or_exit(
         "Commands",
@@ -626,21 +772,20 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         summary=_commands_log_summary,
     )
     review = _merge_review(review, cmd_review)
-    _render_commands_section(commands)
 
-    responses, _resp_review = _extract_or_exit(
+    responses, resp_review = _extract_or_exit(
         "Responses",
         lambda: extract_responses(parsed),
         summary=_responses_log_summary,
     )
-    _render_responses_section(responses)
+    review = _merge_review(review, resp_review)
 
-    polling, _poll_review = _extract_or_exit(
+    polling, poll_review = _extract_or_exit(
         "Polling",
         lambda: extract_polling(parsed),
         summary=_polling_log_summary,
     )
-    _render_polling_section(config_fields, polling)
+    review = _merge_review(review, poll_review)
 
     discovery, discovery_review = _extract_or_exit(
         "Discovery",
@@ -652,7 +797,6 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         summary=_discovery_log_summary,
     )
     review = _merge_review(review, discovery_review)
-    _render_discovery_section(discovery)
 
     on_connect, on_connect_review = _extract_or_exit(
         "On-connect",
@@ -660,10 +804,8 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         summary=_on_connect_log_summary,
     )
     review = _merge_review(review, on_connect_review)
-    _render_on_connect_section(on_connect)
-    _render_compatible_models_section(compatible_models)
 
-    help_section, _help_review = _extract_or_exit(
+    help_section, help_review = _extract_or_exit(
         "Help",
         lambda: extract_help(
             root,
@@ -672,7 +814,7 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         ),
         summary=_help_log_summary,
     )
-    _render_help_section(help_section)
+    review = _merge_review(review, help_review)
 
     simulator, simulator_review = _extract_or_exit(
         "Simulator",
@@ -680,8 +822,68 @@ def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
         summary=_simulator_log_summary,
     )
     review = _merge_review(review, simulator_review)
-    _render_simulator_section(simulator)
-    _render_review_flags(review)
+
+    return ExtractedModuleSections(
+        manifest=manifest,
+        registry_report=registry_report,
+        compatible_models=compatible_models,
+        transport=transport,
+        config_fields=config_fields,
+        state_variables=state_variables,
+        commands=commands,
+        responses=responses,
+        polling=polling,
+        discovery=discovery,
+        on_connect=on_connect,
+        help_section=help_section,
+        simulator=simulator,
+        review=review,
+    )
+
+
+def _collect_review_report(
+    root: Path,
+    parsed: ParsedModule,
+    *,
+    manifest: ManifestSection | None = None,
+    review: ReviewReport | None = None,
+) -> ReviewReport:
+    """Run all extractors and merge review flags without rendering stdout."""
+    return _extract_module_sections(root, parsed, manifest=manifest, review=review).review
+
+
+def _render_eligible(root: Path, module_id: str, parsed: ParsedModule) -> None:
+    typer.echo("Eligibility: eligible")
+    typer.echo(f"Module: {module_id}")
+    typer.echo("Ready for extraction: yes")
+
+    sections = _extract_module_sections(root, parsed)
+
+    _render_metadata(sections.manifest)
+    _render_manufacturer_match(sections.registry_report)
+    _render_transport_section(sections.transport)
+    _render_config_fields_section(sections.config_fields)
+    _render_state_variables_section(sections.state_variables)
+    _render_commands_section(sections.commands)
+    _render_responses_section(sections.responses)
+    _render_polling_section(sections.config_fields, sections.polling)
+    _render_discovery_section(sections.discovery)
+    _render_on_connect_section(sections.on_connect)
+    _render_compatible_models_section(sections.compatible_models)
+    _render_help_section(sections.help_section)
+    _render_simulator_section(sections.simulator)
+    _render_review_flags(sections.review)
+
+
+def _extract_manifest_with_registry(root: Path) -> tuple[ManifestSection, ReviewReport]:
+    manifest, review = _extract_or_exit(
+        "Manifest",
+        lambda: extract_manifest(root),
+        summary=_manifest_log_summary,
+    )
+    registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
+    review = _merge_review(review, registry_report)
+    return manifest, review
 
 
 def _render_declined(module_id: str, gate: GateResult) -> None:
@@ -706,11 +908,18 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
 def convert(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
     output: str = typer.Option(..., "-o", "--output", help="Output .avcdriver path."),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Use strict review handling (default): exit 1 if review flags remain.",
+        show_default=False,
+    ),
     lenient: bool = typer.Option(
         False,
         "--lenient",
         "-l",
         help="Relax review handling for eligible modules; never overrides a decline.",
+        show_default=False,
     ),
     keep_temp: bool = typer.Option(
         False,
@@ -724,7 +933,7 @@ def convert(
     ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
-    _ = lenient
+    mode = _resolve_conversion_mode(strict=strict, lenient=lenient)
     emit(_LOGGER, logging.DEBUG, "source_resolution_start", raw=source)
     try:
         with resolve_source(source, keep_temp=keep_temp) as resolved:
@@ -732,11 +941,11 @@ def convert(
             if keep_temp:
                 _log_source_clone_preserved(resolved)
             root = resolved.root
-            module_id, _parsed, gate = _assess_root(root)
+            module_id, parsed, gate = _assess_root(root)
             _log_gate_result(gate)
+            out_path = Path(output)
 
             if not gate.eligible:
-                out_path = Path(output)
                 decline_path = declined_json_path_for_output(out_path)
                 report = build_declined_report(
                     source=str(root),
@@ -764,13 +973,7 @@ def convert(
                 raise typer.Exit(code=2)
 
             if interactive:
-                manifest, review = _extract_or_exit(
-                    "Manifest",
-                    lambda: extract_manifest(root),
-                    summary=_manifest_log_summary,
-                )
-                registry_report = reconcile_manufacturer(manifest, registry=_load_registry())
-                review = ReviewReport(flags=review.flags + registry_report.flags)
+                manifest, review = _extract_manifest_with_registry(root)
                 manifest, review = apply_interactive_prompts(
                     manifest,
                     review,
@@ -787,16 +990,21 @@ def convert(
                 typer.echo(f"  manufacturer: {manifest.manufacturer}")
                 typer.echo(f"  author: {manifest.author}")
                 typer.echo(f"  unresolved review flags: {len(review)}")
+                review = _collect_review_report(root, parsed, manifest=manifest, review=review)
+            else:
+                review = _collect_review_report(root, parsed)
 
-            # M21 strict mode will call validate_upstream_or_exit before writing YAML.
+            _write_sibling_artifacts(parsed, out_path)
+            _apply_review_policy(
+                mode,
+                review,
+                out_path=out_path,
+                source=str(root),
+                module_id=module_id,
+            )
+            # M22+: call validate_upstream_or_exit before writing .avcdriver YAML.
     except SourceResolutionError as exc:
         _source_resolution_exit(exc)
-
-    typer.echo(
-        "Warning: module is eligible for YAML conversion, but extractors are "
-        "not implemented yet (M4+). No .avcdriver was written.",
-        err=True,
-    )
 
 
 @app.command()

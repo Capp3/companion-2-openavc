@@ -1,19 +1,127 @@
 # User Guide
 
-!!! note "Coming in M23"
-    Full user documentation will land with milestone M23. This page is a placeholder.
+This guide describes the current C2O CLI surface. C2O is still before the main `.avcdriver` emitter milestone, so `convert` currently runs the extraction/reporting pipeline and writes sidecar or sibling artefacts, but does not write the primary `.avcdriver` file yet.
 
-## Planned usage
+## Install
+
+Requirements:
+
+- Python 3.12 or newer.
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
-# Convert a local Companion module clone
-c2o convert ./companion-module-bmd-webpresenter -o bmd-webpresenter.avcdriver
-
-# Inspect eligibility and extraction summary (dry run)
-c2o inspect bmd-webpresenter
-
-# Validate an existing .avcdriver against upstream rules
-c2o validate ./bmd-webpresenter.avcdriver
+uv sync --all-extras
+uv run c2o --help
 ```
 
-See the [repository README](https://github.com/Capp3/companion-2-openavc) for the current CLI status.
+## Source Inputs
+
+Commands that accept a Companion module source support three forms:
+
+- Local path: `./companion-module-bmd-webpresenter`
+- GitHub URL: `https://github.com/bitfocus/companion-module-bmd-webpresenter`
+- Bare module ID: `bmd-webpresenter`
+
+Remote sources are cloned fresh with `--depth 1` into a temporary directory. Temporary clones are removed after the run unless `--keep-temp` is passed.
+
+## Inspect A Module
+
+`inspect` is the safest first command. It does not write files.
+
+```bash
+uv run c2o inspect ./companion-module-bmd-webpresenter
+uv run c2o inspect bmd-webpresenter
+uv run c2o inspect bmd-webpresenter --keep-temp
+```
+
+The output starts with the YAML suitability gate result. Eligible modules then show extraction summaries for metadata, manufacturer reconciliation, transport, config fields, state variables, commands, responses, polling, help, discovery, compatible models, on-connect sends, simulator hints, and review-flag counts.
+
+Declined modules show blocker codes and recommendations instead.
+
+## Convert A Module
+
+`convert` currently performs the conversion pipeline and writes supported report artefacts. It does not write the main `.avcdriver` file yet.
+
+```bash
+uv run c2o convert ./companion-module-bmd-webpresenter -o out/bmd-webpresenter.avcdriver
+```
+
+Options:
+
+- `-o, --output PATH` - required output path. The path stem is used for sidecar and sibling filenames.
+- `--strict` - default review policy. Eligible modules with unresolved review flags exit 1.
+- `--lenient`, `-l` - write `.review.json` for unresolved review flags and exit 0 for eligible modules.
+- `--interactive/--no-interactive` - prompt for metadata fields C2O cannot safely infer.
+- `--keep-temp` - preserve cloned remote sources for debugging.
+
+`--strict` and `--lenient` are mutually exclusive. Passing both exits before source resolution.
+
+### Files Written By Convert
+
+For declined modules:
+
+- `<stem>.declined.json` - machine-readable blocker report.
+- Exit code 2.
+- No sibling files.
+
+For eligible modules with Companion feedbacks or presets:
+
+- `<stem>.companion-feedbacks.yml` - informational feedback definitions from `setFeedbackDefinitions(...)`.
+- `<stem>.companion-presets.yml` - informational preset definitions from `setPresetDefinitions(...)`.
+
+These sibling YAML files are not part of the OpenAVC catalog and are ignored by the upstream validator.
+
+For eligible modules with review flags in lenient mode:
+
+- `<stem>.review.json` - machine-readable review flags.
+- Exit code 0.
+
+For eligible modules with review flags in strict mode:
+
+- Exit code 1.
+- Review flags are listed on stderr.
+- Sibling YAMLs are still written when available.
+
+## Validate A Driver
+
+`validate` checks an existing `.avcdriver` file against the vendored upstream OpenAVC rules.
+
+```bash
+uv run c2o validate ./drivers/generic/example.avcdriver
+```
+
+Internally, C2O stages the single driver into an isolated OpenAVC-style catalog and runs the vendored `build_index.py --check` validator. Validation errors preserve upstream stderr lines.
+
+## Version
+
+```bash
+uv run c2o version
+```
+
+## Logging
+
+Root logging options come before the subcommand:
+
+```bash
+uv run c2o -v inspect bmd-webpresenter
+uv run c2o -vv --log-format json inspect bmd-webpresenter
+```
+
+- `-v` enables INFO logs.
+- `-vv` enables DEBUG logs.
+- `--log-format text` is the default.
+- `--log-format json` emits one JSON object per line with `ts`, `level`, `event`, `module`, and `details`.
+
+## Exit Codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Success, including lenient eligible conversions with review sidecars. |
+| 1 | Strict-mode review failure, validation failure, or general input/runtime failure. |
+| 2 | YAML suitability decline. Declines are not overridden by `--lenient`. |
+
+## Current Limits
+
+C2O does not generate OpenAVC Python drivers. Modules requiring UDP, binary framing, custom authentication, or other Python-driver-only behaviour are declined with a `.declined.json` report.
+
+The main `.avcdriver` YAML emitter is not present yet. Until it lands, use `inspect`, `validate`, and the generated sidecar/sibling artefacts to review extracted conversion data.
