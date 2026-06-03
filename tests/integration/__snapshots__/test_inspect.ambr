@@ -1,0 +1,72 @@
+# serializer version: 1
+# name: test_inspect_bmd_webpresenter_stdout_matches_snapshot
+  '''
+  Eligibility: eligible
+  Module: bmd-webpresenter
+  Ready for extraction: yes
+  Metadata:
+    id: bmd_webpresenter
+    name: WebPresenter
+    manufacturer: Blackmagic Design
+    category: streaming
+    version: 2.1.3
+    author: Peter Daniel
+    description: Live stream from any SDI video source direct to YouTube, Facebook, Twitter and more
+    source_url: https://github.com/bitfocus/companion-module-bmd-webpresenter
+  Manufacturer match: ok
+  Transport: tcp
+  Delimiter: "\n"
+  Config fields: 2
+    host: string (default: "")
+    port: integer (default: 9977)
+  State variables: 17
+    model: string ("Device Model")
+    label: string ("Device Label")
+    software: string ("Device Software")
+  Commands: 2
+    stream_start: "STREAM STATE:
+  Action: Start
+  
+  "
+    stream_stop: "STREAM STATE:
+  Action: Stop
+  
+  "
+  Responses: 14
+    ^Label:\s*(.+)$
+    ^Model:\s*(.+)$
+    ^Software\ Release:\s*(.+)$
+  Polling: 1 queries
+    poll_interval: 1 (inferred)
+    "STREAM STATE:\n\n"
+  Discovery:
+    port_open: [9977]
+    manufacturer_alias: ["Blackmagic Design", "Blackmagic"]
+  On-connect: 0 commands
+  Compatible models: 1 entry
+    Blackmagic Design: ["WebPresenter HD", "WebPresenter 4K"] (untested)
+  Help:
+    overview: Module to control and monitor the [Blackmagic Design Web Presenter HD and 4K]...
+    setup: Once connection to the device has been established the stream 'Video Mode', '...
+  Simulator:
+    initial_state: 17 entries
+    controls: 17
+    command_handlers: 0
+  Review flags: 22
+    [id_coerced] id - Driver id was coerced from 'bmd-webpresenter' to 'bmd_webpresenter'.
+    [compatible_models_confidence] compatible_models - Compatible model entries are derived from Companion manifest products and default to untested confidence.
+    [inferred_state_type] state_variables.model - Type for state variable 'model' was inferred as 'string'.
+  
+  '''
+# ---
+# name: test_inspect_declined_stdout_matches_snapshot
+  '''
+  Eligibility: declined
+  Module: declined_udp
+  Blockers: 1
+  Code | Message | Evidence
+  --- | --- | ---
+  transport_udp | Module uses UDPHelper; OpenAVC recommends a Python driver for UDP protocols. | index.js:1 — import { InstanceBase, runEntrypoint, UDPHelper } from '@companion-module/base'
+  
+  '''
+# ---

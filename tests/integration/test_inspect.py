@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from typer.testing import CliRunner
 
@@ -17,6 +18,13 @@ def test_inspect_declined_prints_eligibility_first(declined_udp: Path) -> None:
     assert "Blockers: 1" in result.stdout
     assert "transport_udp" in result.stdout
     assert "UDPHelper" in result.stdout
+
+
+def test_inspect_declined_stdout_matches_snapshot(declined_udp: Path, snapshot: Any) -> None:
+    result = CliRunner().invoke(app, ["inspect", str(declined_udp)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert result.stdout == snapshot
 
 
 def test_inspect_eligible_prints_manifest_metadata(dummy_device: Path) -> None:
@@ -116,6 +124,16 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert "  command_handlers: 0" in result.stdout
     assert "Review flags: 22" in result.stdout
     assert "[id_coerced] id -" in result.stdout
+
+
+def test_inspect_bmd_webpresenter_stdout_matches_snapshot(
+    bmd_webpresenter: Path,
+    snapshot: Any,
+) -> None:
+    result = CliRunner().invoke(app, ["inspect", str(bmd_webpresenter)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert result.stdout == snapshot
 
 
 def test_inspect_static_on_connect_prints_on_connect_commands(static_on_connect: Path) -> None:

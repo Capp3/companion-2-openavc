@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import sys
 import tempfile
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ class ResolvedSource:
     kind: SourceKind
     clone_url: str | None = None
     tempdir: Path | None = None
+    duration_ms: float | None = None
 
 
 @contextmanager
@@ -41,8 +43,16 @@ def resolve_source(raw: str, *, keep_temp: bool = False) -> Iterator[ResolvedSou
             raise AssertionError(msg)
 
         tempdir = Path(tempfile.mkdtemp(prefix="c2o-clone-"))
+        started = time.perf_counter()
         git_clone(clone_url, tempdir, depth=1)
-        yield ResolvedSource(root=tempdir, kind=kind, clone_url=clone_url, tempdir=tempdir)
+        duration_ms = (time.perf_counter() - started) * 1000
+        yield ResolvedSource(
+            root=tempdir,
+            kind=kind,
+            clone_url=clone_url,
+            tempdir=tempdir,
+            duration_ms=duration_ms,
+        )
     finally:
         if tempdir is not None:
             if keep_temp:

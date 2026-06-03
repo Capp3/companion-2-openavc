@@ -1,0 +1,12 @@
+id: tampered_invalid
+name: Tampered Invalid
+manufacturer: Generic
+category: utility
+version: nope
+author: C2O
+transport: tcp
+description: Invalid driver used to exercise upstream validation failures.
+source_url: https://github.com/example/tampered-invalid
+help:
+  overview: Minimal overview.
+  setup: Minimal setup.

@@ -1,0 +1,12 @@
+id: minimal_valid
+name: Minimal Valid
+manufacturer: Generic
+category: utility
+version: 1.0.0
+author: C2O
+transport: tcp
+description: Minimal driver used to exercise upstream validation.
+source_url: https://github.com/example/minimal-valid
+help:
+  overview: Minimal overview.
+  setup: Minimal setup.

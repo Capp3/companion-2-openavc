@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -13,8 +14,11 @@ from c2o.source.resolver import resolve_source
 
 
 @pytest.fixture(autouse=True)
-def reset_git_runner() -> None:
+def reset_git_runner() -> Iterator[None]:
+    previous = remote._git_runner_override
     remote._git_runner_override = None
+    yield
+    remote._git_runner_override = previous
 
 
 def test_resolve_source_local_yields_absolute_root(tmp_path: Path) -> None:
@@ -22,6 +26,7 @@ def test_resolve_source_local_yields_absolute_root(tmp_path: Path) -> None:
         assert resolved.root == tmp_path.resolve()
         assert resolved.tempdir is None
         assert resolved.clone_url is None
+        assert resolved.duration_ms is None
 
 
 def test_resolve_source_removes_tempdir_after_context() -> None:
@@ -38,6 +43,8 @@ def test_resolve_source_removes_tempdir_after_context() -> None:
     with resolve_source("file:///tmp/repo.git") as resolved:
         assert resolved.tempdir is not None
         assert resolved.root == resolved.tempdir
+        assert resolved.duration_ms is not None
+        assert resolved.duration_ms >= 0
         assert (resolved.root / "marker").is_file()
 
     assert seen_tempdir is not None

@@ -1,0 +1,42 @@
+# serializer version: 1
+# name: test_convert_declined_verbose_json_logs_match_snapshot
+  '''
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "source_resolution_complete", "module": "c2o", "details": {"kind": "local", "root": "<declined-udp>", "duration_ms": null}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "suitability_gate_result", "module": "c2o", "details": {"eligible": false, "blocker_codes": ["transport_udp"]}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "WARNING", "event": "conversion_declined", "module": "c2o", "details": {"module_id": "declined_udp", "blocker_codes": ["transport_udp"], "blockers": [{"code": "transport_udp", "message": "Module uses UDPHelper; OpenAVC recommends a Python driver for UDP protocols.", "evidence": "index.js:1 \u2014 import { InstanceBase, runEntrypoint, UDPHelper } from '@companion-module/base'", "upstream_reference": "open-avc/openavc-drivers AGENTS.md \u00a71 \u2014 UDP broadcast/multicast? Use Python."}]}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "output_write", "module": "c2o", "details": {"path": "<tmp>/out.declined.json", "bytes": 0}}
+  
+  '''
+# ---
+# name: test_inspect_verbose_json_logs_match_snapshot
+  '''
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "source_resolution_start", "module": "c2o", "details": {"raw": "<bmd-webpresenter>"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "source_resolution_complete", "module": "c2o", "details": {"kind": "local", "root": "<bmd-webpresenter>", "duration_ms": null}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "suitability_gate_result", "module": "c2o", "details": {"eligible": true, "blocker_codes": []}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "manifest"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "manifest", "fields": {"metadata": 8}, "review_flags": 1}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "compatible_models"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "compatible_models", "fields": {"compatible_models": 1}, "review_flags": 1}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "transport"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "transport", "fields": {"transport": "tcp", "delimiter": true}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "config_fields"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "config_fields", "fields": {"config_schema": 2, "default_config": 2}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "state_variables"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "state_variables", "fields": {"state_variables": 17}, "review_flags": 17}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "commands"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "commands", "fields": {"commands": 2}, "review_flags": 1}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "responses"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "responses", "fields": {"responses": 14}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "polling"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "polling", "fields": {"queries": 1, "inferred_poll_interval": true}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "discovery"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "discovery", "fields": {"port_open": 1, "manufacturer_alias": 2}, "review_flags": 1}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "on_connect"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "on_connect", "fields": {"commands": 0}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "help"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "help", "fields": {"overview": true, "setup": true}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "simulator"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "simulator", "fields": {"initial_state": 17, "controls": 17, "command_handlers": 0}, "review_flags": 1}}
+  
+  '''
+# ---
