@@ -1,6 +1,6 @@
 # User Guide
 
-This guide describes the current C2O CLI surface. C2O is still before the main `.avcdriver` emitter milestone, so `convert` currently runs the extraction/reporting pipeline and writes sidecar or sibling artefacts, but does not write the primary `.avcdriver` file yet.
+This guide describes the current C2O CLI surface. `convert` runs the extraction pipeline, writes an OpenAVC `.avcdriver` for eligible modules, and emits machine-readable sidecar reports when a module is declined or needs review.
 
 ## Install
 
@@ -40,15 +40,17 @@ Declined modules show blocker codes and recommendations instead.
 
 ## Convert A Module
 
-`convert` currently performs the conversion pipeline and writes supported report artefacts. It does not write the main `.avcdriver` file yet.
+`convert` performs the conversion pipeline and writes the generated OpenAVC `.avcdriver` for eligible modules.
 
 ```bash
 uv run c2o convert ./companion-module-bmd-webpresenter -o out/bmd-webpresenter.avcdriver
+uv run c2o convert bmd-webpresenter --output-root out/drivers
 ```
 
 Options:
 
-- `-o, --output PATH` - required output path. The path stem is used for sidecar and sibling filenames.
+- `-o, --output PATH` - explicit output `.avcdriver` path. The path stem is used for sidecar and sibling filenames.
+- `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. Mutually exclusive with `-o`.
 - `--strict` - default review policy. Eligible modules with unresolved review flags exit 1.
 - `--lenient`, `-l` - write `.review.json` for unresolved review flags and exit 0 for eligible modules.
 - `--interactive/--no-interactive` - prompt for metadata fields C2O cannot safely infer.
@@ -66,6 +68,7 @@ For declined modules:
 
 For eligible modules with Companion feedbacks or presets:
 
+- `<stem>.avcdriver` - generated OpenAVC YAML driver.
 - `<stem>.companion-feedbacks.yml` - informational feedback definitions from `setFeedbackDefinitions(...)`.
 - `<stem>.companion-presets.yml` - informational preset definitions from `setPresetDefinitions(...)`.
 
@@ -73,6 +76,7 @@ These sibling YAML files are not part of the OpenAVC catalog and are ignored by 
 
 For eligible modules with review flags in lenient mode:
 
+- `<stem>.avcdriver` - best-effort generated driver.
 - `<stem>.review.json` - machine-readable review flags.
 - Exit code 0.
 
@@ -80,6 +84,7 @@ For eligible modules with review flags in strict mode:
 
 - Exit code 1.
 - Review flags are listed on stderr.
+- No `.avcdriver` is written.
 - Sibling YAMLs are still written when available.
 
 ## Validate A Driver
@@ -116,12 +121,10 @@ uv run c2o -vv --log-format json inspect bmd-webpresenter
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Success, including lenient eligible conversions with review sidecars. |
+| 0 | Success, including lenient eligible conversions with `.avcdriver` and review sidecars. |
 | 1 | Strict-mode review failure, validation failure, or general input/runtime failure. |
 | 2 | YAML suitability decline. Declines are not overridden by `--lenient`. |
 
 ## Current Limits
 
 C2O does not generate OpenAVC Python drivers. Modules requiring UDP, binary framing, custom authentication, or other Python-driver-only behaviour are declined with a `.declined.json` report.
-
-The main `.avcdriver` YAML emitter is not present yet. Until it lands, use `inspect`, `validate`, and the generated sidecar/sibling artefacts to review extracted conversion data.

@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 from typer.testing import CliRunner
 
 from c2o.cli import app
+from c2o.validate import validate_upstream
 
 
 def test_convert_declined_udp_writes_golden_json(
@@ -79,7 +81,9 @@ def test_convert_lenient_eligible_dummy_exits_zero(
     )
     assert result.exit_code == 0, result.stdout + result.stderr
     assert result.stderr == ""
-    assert not out_avc.exists()
+    assert out_avc.is_file()
+    assert yaml.safe_load(out_avc.read_text(encoding="utf-8"))["id"] == "dummy_device"
+    assert validate_upstream(out_avc).passed
     assert not (tmp_path / "out.declined.json").exists()
 
     review_path = tmp_path / "out.review.json"
@@ -116,3 +120,61 @@ def test_convert_rejects_strict_and_lenient_together(
     assert result.exit_code == 2
     assert "--strict and --lenient cannot be used together" in result.stderr
     assert not out_avc.exists()
+
+
+def test_convert_rejects_output_and_output_root_together(
+    dummy_device: Path,
+    tmp_path: Path,
+) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "convert",
+            str(dummy_device),
+            "-o",
+            str(tmp_path / "out.avcdriver"),
+            "--output-root",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--output and --output-root cannot be used together" in result.stderr
+
+
+def test_convert_rejects_missing_output_target(dummy_device: Path) -> None:
+    result = CliRunner().invoke(app, ["convert", str(dummy_device)])
+
+    assert result.exit_code == 2
+    assert "one of --output or --output-root is required" in result.stderr
+
+
+def test_convert_output_root_derives_eligible_driver_path(
+    dummy_device: Path,
+    tmp_path: Path,
+) -> None:
+    result = CliRunner().invoke(
+        app,
+        ["convert", str(dummy_device), "--output-root", str(tmp_path), "--lenient"],
+    )
+
+    out_avc = tmp_path / "utility" / "dummy_device.avcdriver"
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert out_avc.is_file()
+    assert out_avc.with_suffix(".review.json").is_file()
+    assert out_avc.with_suffix(".companion-feedbacks.yml").is_file()
+    assert out_avc.with_suffix(".companion-presets.yml").is_file()
+
+
+def test_convert_output_root_derives_declined_sidecar_path(
+    declined_udp: Path,
+    tmp_path: Path,
+) -> None:
+    result = CliRunner().invoke(
+        app,
+        ["convert", str(declined_udp), "--output-root", str(tmp_path)],
+    )
+
+    assert result.exit_code == 2, result.stdout + result.stderr
+    assert not (tmp_path / "declined_udp.avcdriver").exists()
+    assert (tmp_path / "declined_udp.declined.json").is_file()

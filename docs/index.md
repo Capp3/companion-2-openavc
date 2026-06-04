@@ -6,15 +6,15 @@ C2O is a translator, not a runtime. It statically reads Companion module source,
 
 ## Status
 
-C2O is in active development. Milestones M1-M22 have landed parser, suitability-gate, extraction, inspection, validation, logging, strict/lenient review, and Companion sibling artefact support.
+C2O is in active development. Milestones M1-M23.5 have landed parser, suitability-gate, extraction, inspection, validation, logging, strict/lenient review, Companion sibling artefact support, and primary `.avcdriver` YAML emission.
 
-Primary `.avcdriver` emission has not landed yet. Today, `c2o convert` runs the conversion pipeline and writes the reports and sibling files that are already supported:
+Today, `c2o convert` writes generated `.avcdriver` YAML for eligible modules and may also write supporting artefacts:
 
 - `.declined.json` for modules that cannot be represented as declarative YAML.
 - `.review.json` in lenient mode when eligible modules still have review flags.
 - `.companion-feedbacks.yml` and `.companion-presets.yml` for informational Companion UI artefacts.
 
-Use `c2o inspect` for a read-only extraction summary and `c2o validate` to check existing `.avcdriver` files against the upstream OpenAVC validator.
+Use `c2o inspect` for a read-only extraction summary and `c2o validate` to check `.avcdriver` files against the upstream OpenAVC validator.
 
 ## Quick Links
 

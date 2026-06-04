@@ -6,15 +6,15 @@ C2O is a static translator. It reads Companion module source, extracts the parts
 
 ## Status
 
-C2O is in active development. Milestones M1-M22 have landed source resolution, the YAML suitability gate, static extractors, inspection, upstream validation, logging, strict/lenient review modes, and Companion sibling artefacts.
+C2O is in active development. Milestones M1-M23.5 have landed source resolution, the YAML suitability gate, static extractors, inspection, upstream validation, logging, strict/lenient review modes, Companion sibling artefacts, and primary `.avcdriver` YAML emission.
 
-The primary `.avcdriver` YAML emitter has not landed yet. Today, `c2o convert` runs the conversion pipeline and writes supported report artefacts:
+Today, `c2o convert` writes the generated driver for eligible modules and may also write supporting artefacts:
 
 - `.declined.json` for modules that are not suitable for declarative YAML.
 - `.review.json` in lenient mode for eligible modules with review flags.
 - `.companion-feedbacks.yml` and `.companion-presets.yml` for informational Companion UI artefacts.
 
-Use `c2o inspect` to preview extraction results and `c2o validate` to check existing `.avcdriver` files against the vendored upstream validator.
+Use `c2o inspect` to preview extraction results and `c2o validate` to check `.avcdriver` files against the vendored upstream validator.
 
 ## Source Of Truth
 
@@ -33,10 +33,10 @@ Detailed Companion -> OpenAVC mapping rules live in [`memory-bank/projectbrief.m
 flowchart LR
   companion[Companion module] --> c2o[C2O CLI]
   c2o --> inspect[inspect summary]
+  c2o --> driver[.avcdriver YAML]
   c2o --> declined[.declined.json]
   c2o --> review[.review.json]
   c2o --> siblings[companion sibling YAML]
-  c2o -. future .-> driver[.avcdriver YAML]
 ```
 
 Modules that require UDP, binary framing, custom authentication, or another Python-driver-only capability are declined with exit code 2 and a `.declined.json` report.
@@ -72,23 +72,23 @@ uv run c2o inspect bmd-webpresenter --keep-temp
 
 ### Convert
 
-Run the conversion pipeline and write supported sidecar/sibling artefacts:
+Run the conversion pipeline and write the OpenAVC driver plus any applicable sidecar/sibling artefacts:
 
 ```bash
 uv run c2o convert ./companion-module-bmd-webpresenter -o out/bmd-webpresenter.avcdriver
+uv run c2o convert bmd-webpresenter --output-root out/drivers
 uv run c2o convert bmd-webpresenter -o out/bmd-webpresenter.avcdriver --lenient
 uv run c2o convert bmd-webpresenter -o out/bmd-webpresenter.avcdriver --interactive
 ```
 
 Important flags:
 
-- `-o, --output PATH` - required output path. The stem determines sidecar/sibling filenames.
+- `-o, --output PATH` - explicit output `.avcdriver` path. The stem determines sidecar/sibling filenames.
+- `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. Mutually exclusive with `-o`.
 - `--strict` - default policy; unresolved review flags exit 1.
 - `--lenient`, `-l` - eligible modules with review flags exit 0 and write `.review.json`.
 - `--interactive/--no-interactive` - prompt for metadata C2O cannot safely infer.
 - `--keep-temp` - preserve remote clone tempdirs for debugging.
-
-`convert` does not write the primary `.avcdriver` file yet.
 
 ### Validate
 
