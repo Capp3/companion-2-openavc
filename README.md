@@ -6,13 +6,13 @@ C2O is a static translator. It reads Companion module source, extracts the parts
 
 ## Status
 
-C2O is in active development. Milestones M1-M23.6 have landed source resolution, the YAML suitability gate, static extractors, inspection, upstream validation, logging, strict/lenient/todo review modes, Companion sibling artefacts, and primary `.avcdriver` YAML emission.
+C2O is in active development. Milestones M1-M23.7 have landed source resolution, the YAML suitability gate, static extractors, inspection, upstream validation, logging, strict/lenient/todo review modes, Companion sibling artefacts, and primary `.avcdriver` YAML emission.
 
 Today, `c2o convert` writes the generated driver for eligible modules and may also write supporting artefacts:
 
 - `.declined.json` for modules that are not suitable for declarative YAML.
-- `.review.json` in lenient mode for eligible modules with review flags.
-- `#TODO` comments in `.avcdriver` YAML when `--todo` is used.
+- `.review.json` in default todo mode or lenient mode for eligible modules with review flags.
+- `#TODO` comments in `.avcdriver` YAML by default, or explicitly with `--todo`.
 - `.companion-feedbacks.yml` and `.companion-presets.yml` for informational Companion UI artefacts.
 
 Use `c2o inspect` to preview extraction results and `c2o validate` to check `.avcdriver` files against the vendored upstream validator.
@@ -87,9 +87,9 @@ Important flags:
 
 - `-o, --output PATH` - explicit output `.avcdriver` path. The stem determines sidecar/sibling filenames. Mutually exclusive with `--output-root`.
 - `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. **Defaults to `./out`** if neither flag is given.
-- `--strict` - default policy; unresolved review flags exit 1.
+- `--strict` - opt into strict review handling; unresolved review flags exit 1 and no `.avcdriver` is written.
 - `--lenient`, `-l` - eligible modules with review flags exit 0 and write `.review.json`.
-- `--todo`, `-todo` - same exit/write policy as `--lenient`, but also inserts `#TODO` review comments into the `.avcdriver` before flagged YAML fields.
+- `--todo`, `-todo` - default policy; same exit/write policy as `--lenient`, but also inserts `#TODO` review comments into the `.avcdriver` before flagged YAML fields.
 - `--interactive/--no-interactive` - prompt for metadata C2O cannot safely infer.
 - `--keep-temp` - preserve remote clone tempdirs for debugging.
 
@@ -111,7 +111,7 @@ uv run c2o version
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Success, including lenient/todo eligible conversions with `.review.json`. |
+| 0 | Success, including default todo and lenient eligible conversions with `.review.json`. |
 | 1 | Strict review failure, validation failure, or general input/runtime failure. |
 | 2 | YAML suitability decline. `--lenient` / `--todo` do not override a decline. |
 

@@ -17,7 +17,7 @@ def test_convert_dummy_writes_sibling_yaml_before_strict_failure(
 ) -> None:
     out_avc = tmp_path / "out.avcdriver"
 
-    result = CliRunner().invoke(app, ["convert", str(dummy_device), "-o", str(out_avc)])
+    result = CliRunner().invoke(app, ["convert", str(dummy_device), "-o", str(out_avc), "--strict"])
 
     assert result.exit_code == 1, result.stdout + result.stderr
     assert not out_avc.exists()
@@ -36,7 +36,9 @@ def test_convert_bmd_writes_sibling_yaml_before_strict_failure(
 ) -> None:
     out_avc = tmp_path / "out.avcdriver"
 
-    result = CliRunner().invoke(app, ["convert", str(bmd_webpresenter), "-o", str(out_avc)])
+    result = CliRunner().invoke(
+        app, ["convert", str(bmd_webpresenter), "-o", str(out_avc), "--strict"]
+    )
 
     assert result.exit_code == 1, result.stdout + result.stderr
     assert not out_avc.exists()
@@ -68,8 +70,12 @@ def test_convert_sibling_yaml_is_deterministic(
     first = tmp_path / "first" / "out.avcdriver"
     second = tmp_path / "second" / "out.avcdriver"
 
-    first_result = CliRunner().invoke(app, ["convert", str(dummy_device), "-o", str(first)])
-    second_result = CliRunner().invoke(app, ["convert", str(dummy_device), "-o", str(second)])
+    first_result = CliRunner().invoke(
+        app, ["convert", str(dummy_device), "-o", str(first), "--strict"]
+    )
+    second_result = CliRunner().invoke(
+        app, ["convert", str(dummy_device), "-o", str(second), "--strict"]
+    )
 
     assert first_result.exit_code == 1, first_result.stdout + first_result.stderr
     assert second_result.exit_code == 1, second_result.stdout + second_result.stderr

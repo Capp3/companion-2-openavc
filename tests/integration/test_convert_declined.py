@@ -35,16 +35,14 @@ def test_convert_declined_udp_writes_golden_json(
     assert payload == snapshot
 
 
-@pytest.mark.parametrize("mode_args", [[], ["--strict"]])
 def test_convert_strict_eligible_dummy_exits_one_with_review_flags(
     dummy_device: Path,
     tmp_path: Path,
-    mode_args: list[str],
 ) -> None:
     out_avc = tmp_path / "out.avcdriver"
     result = CliRunner().invoke(
         app,
-        ["convert", str(dummy_device), "-o", str(out_avc), *mode_args],
+        ["convert", str(dummy_device), "-o", str(out_avc), "--strict"],
     )
     assert result.exit_code == 1, result.stdout + result.stderr
     assert "Strict mode: conversion requires 7 review flag(s) to be resolved." in result.stderr
@@ -168,16 +166,20 @@ def test_convert_defaults_output_root_to_out_dir(
     assert out_avc.is_file()
 
 
-@pytest.mark.parametrize("mode_arg", ["--todo", "-todo"])
+@pytest.mark.parametrize("mode_arg", [None, "--todo", "-todo"])
 def test_convert_todo_eligible_dummy_exits_zero_with_annotated_yaml(
     dummy_device: Path,
     tmp_path: Path,
-    mode_arg: str,
+    mode_arg: str | None,
 ) -> None:
-    out_avc = tmp_path / f"{mode_arg.replace('-', '')}.avcdriver"
+    output_stem = "default" if mode_arg is None else mode_arg.replace("-", "")
+    out_avc = tmp_path / f"{output_stem}.avcdriver"
+    command = ["convert", str(dummy_device), "-o", str(out_avc)]
+    if mode_arg is not None:
+        command.append(mode_arg)
     result = CliRunner().invoke(
         app,
-        ["convert", str(dummy_device), "-o", str(out_avc), mode_arg],
+        command,
     )
 
     assert result.exit_code == 0, result.stdout + result.stderr

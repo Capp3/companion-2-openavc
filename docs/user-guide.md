@@ -51,9 +51,9 @@ Options:
 
 - `-o, --output PATH` - explicit output `.avcdriver` path. The path stem is used for sidecar and sibling filenames. Mutually exclusive with `--output-root`.
 - `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. **Defaults to `./out`** if neither flag is given.
-- `--strict` - default review policy. Eligible modules with unresolved review flags exit 1.
+- `--strict` - opt into strict review handling. Eligible modules with unresolved review flags exit 1 and no `.avcdriver` is written.
 - `--lenient`, `-l` - write `.review.json` for unresolved review flags and exit 0 for eligible modules.
-- `--todo`, `-todo` - same policy as `--lenient`, plus `#TODO` comments in the `.avcdriver` before flagged YAML fields.
+- `--todo`, `-todo` - default review policy. Same policy as `--lenient`, plus `#TODO` comments in the `.avcdriver` before flagged YAML fields.
 - `--interactive/--no-interactive` - prompt for metadata fields C2O cannot safely infer.
 - `--keep-temp` - preserve cloned remote sources for debugging.
 
@@ -81,7 +81,7 @@ For eligible modules with review flags in lenient mode:
 - `<stem>.review.json` - machine-readable review flags.
 - Exit code 0.
 
-For eligible modules with review flags in todo mode:
+For eligible modules with review flags in default todo mode:
 
 - `<stem>.avcdriver` - best-effort generated driver with comment-only `#TODO` review blocks.
 - `<stem>.review.json` - machine-readable review flags.
@@ -130,7 +130,7 @@ uv run c2o -vv --log-format json inspect bmd-webpresenter
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Success, including lenient/todo eligible conversions with `.avcdriver` and review sidecars. |
+| 0 | Success, including default todo and lenient eligible conversions with `.avcdriver` and review sidecars. |
 | 1 | Strict-mode review failure, validation failure, or general input/runtime failure. |
 | 2 | YAML suitability decline. Declines are not overridden by `--lenient` or `--todo`. |
 

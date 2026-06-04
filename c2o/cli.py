@@ -178,9 +178,11 @@ def _resolve_conversion_mode(*, strict: bool, lenient: bool, todo: bool) -> Conv
     ]
     if len(selected) > 1:
         raise typer.BadParameter(f"{', '.join(selected)} cannot be used together")
+    if strict:
+        return "strict"
     if todo:
         return "todo"
-    return "lenient" if lenient else "strict"
+    return "lenient" if lenient else "todo"
 
 
 def _validate_output_args(*, output: str | None, output_root: str | None) -> None:
@@ -993,7 +995,7 @@ def convert(
     strict: bool = typer.Option(
         False,
         "--strict",
-        help="Use strict review handling (default): exit 1 if review flags remain.",
+        help="Use strict review handling: exit 1 if review flags remain.",
         show_default=False,
     ),
     lenient: bool = typer.Option(
@@ -1007,7 +1009,7 @@ def convert(
         False,
         "--todo",
         "-todo",
-        help="Write lenient output with #TODO review comments in the .avcdriver YAML.",
+        help="Write lenient output with #TODO review comments in the .avcdriver YAML (default).",
         show_default=False,
     ),
     keep_temp: bool = typer.Option(
