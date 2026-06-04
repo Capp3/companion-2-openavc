@@ -108,17 +108,27 @@ def test_convert_strict_declined_udp_still_exits_two(
     assert not (tmp_path / "out.review.json").exists()
 
 
-def test_convert_rejects_strict_and_lenient_together(
+@pytest.mark.parametrize(
+    ("mode_args", "expected"),
+    [
+        (["--strict", "--lenient"], "--strict, --lenient cannot be used together"),
+        (["--strict", "--todo"], "--strict, --todo cannot be used together"),
+        (["--lenient", "--todo"], "--lenient, --todo cannot be used together"),
+    ],
+)
+def test_convert_rejects_multiple_review_modes(
     dummy_device: Path,
     tmp_path: Path,
+    mode_args: list[str],
+    expected: str,
 ) -> None:
     out_avc = tmp_path / "out.avcdriver"
     result = CliRunner().invoke(
         app,
-        ["convert", str(dummy_device), "-o", str(out_avc), "--strict", "--lenient"],
+        ["convert", str(dummy_device), "-o", str(out_avc), *mode_args],
     )
     assert result.exit_code == 2
-    assert "--strict and --lenient cannot be used together" in result.stderr
+    assert expected in result.stderr
     assert not out_avc.exists()
 
 
@@ -142,11 +152,58 @@ def test_convert_rejects_output_and_output_root_together(
     assert "--output and --output-root cannot be used together" in result.stderr
 
 
-def test_convert_rejects_missing_output_target(dummy_device: Path) -> None:
-    result = CliRunner().invoke(app, ["convert", str(dummy_device)])
+def test_convert_defaults_output_root_to_out_dir(
+    dummy_device: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(
+        app,
+        ["convert", str(dummy_device), "--lenient"],
+    )
 
-    assert result.exit_code == 2
-    assert "one of --output or --output-root is required" in result.stderr
+    out_avc = tmp_path / "out" / "utility" / "dummy_device.avcdriver"
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert out_avc.is_file()
+
+
+@pytest.mark.parametrize("mode_arg", ["--todo", "-todo"])
+def test_convert_todo_eligible_dummy_exits_zero_with_annotated_yaml(
+    dummy_device: Path,
+    tmp_path: Path,
+    mode_arg: str,
+) -> None:
+    out_avc = tmp_path / f"{mode_arg.replace('-', '')}.avcdriver"
+    result = CliRunner().invoke(
+        app,
+        ["convert", str(dummy_device), "-o", str(out_avc), mode_arg],
+    )
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert result.stderr == ""
+    text = out_avc.read_text(encoding="utf-8")
+    assert "#TODO" in text
+    assert "# companion/manifest.json:[Unknown]" in text
+    assert yaml.safe_load(text)["id"] == "dummy_device"
+    assert validate_upstream(out_avc).passed
+    assert out_avc.with_suffix(".review.json").is_file()
+
+
+def test_convert_todo_declined_udp_still_exits_two(
+    declined_udp: Path,
+    tmp_path: Path,
+) -> None:
+    out_avc = tmp_path / "out.avcdriver"
+    result = CliRunner().invoke(
+        app,
+        ["convert", str(declined_udp), "-o", str(out_avc), "--todo"],
+    )
+
+    assert result.exit_code == 2, result.stdout + result.stderr
+    assert not out_avc.exists()
+    assert (tmp_path / "out.declined.json").is_file()
+    assert not (tmp_path / "out.review.json").exists()
 
 
 def test_convert_output_root_derives_eligible_driver_path(

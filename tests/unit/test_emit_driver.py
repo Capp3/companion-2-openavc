@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from c2o.emit.driver import build_driver_payload, serialize_driver
+from c2o.emit.driver import annotate_driver_yaml, build_driver_payload, serialize_driver
 from c2o.model.driver import (
     CommandEntry,
     CommandsSection,
@@ -26,6 +26,7 @@ from c2o.model.driver import (
     StateVariablesSection,
     TransportSection,
 )
+from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
 
 
 def _sections(**overrides: Any) -> SimpleNamespace:
@@ -62,6 +63,7 @@ def _sections(**overrides: Any) -> SimpleNamespace:
         "polling": PollingSection(queries=("STATUS?\n",), inferred_poll_interval=5),
         "compatible_models": CompatibleModelsSection(),
         "simulator": SimulatorSection(initial_state={"power": False}),
+        "review": ReviewReport(),
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -123,3 +125,110 @@ def test_serialize_driver_double_quotes_protocol_strings() -> None:
     assert '- "STATUS?\\n"' in text
     assert text.endswith("\n")
     assert yaml.safe_load(text)["commands"]["power_on"]["send"] == "PON\n"
+
+
+def test_annotate_driver_yaml_inserts_top_level_todo_before_field() -> None:
+    plain = "id: bmd_webpresenter\nname: BMD Web Presenter\n"
+    review = ReviewReport(
+        flags=(
+            ReviewFlag(
+                code=ReviewCode.ID_COERCED,
+                field="id",
+                message="Driver id was coerced.",
+                details={"old": "bmd-webpresenter", "new": "bmd_webpresenter"},
+            ),
+        )
+    )
+
+    annotated = annotate_driver_yaml(plain, review)
+
+    assert annotated.startswith(
+        "#TODO\n"
+        "#\n"
+        "# companion/manifest.json:[Unknown]\n"
+        "#\n"
+        "# { new=bmd_webpresenter, old=bmd-webpresenter }\n"
+        "# Driver id was coerced.\n"
+        "id: bmd_webpresenter\n"
+    )
+    assert yaml.safe_load(annotated) == yaml.safe_load(plain)
+
+
+def test_annotate_driver_yaml_inserts_nested_todo_with_indent() -> None:
+    plain = (
+        "state_variables:\n"
+        "  power:\n"
+        "    label: Power\n"
+        "    type: boolean\n"
+        "simulator: {}\n"
+    )
+    review = ReviewReport(
+        flags=(
+            ReviewFlag(
+                code=ReviewCode.INFERRED_STATE_TYPE,
+                field="state_variables.power",
+                message="Type for state variable 'power' was inferred as 'boolean'.",
+                details={"variable_id": "power", "inferred_type": "boolean"},
+            ),
+        )
+    )
+
+    annotated = annotate_driver_yaml(plain, review)
+
+    assert (
+        "state_variables:\n"
+        "  #TODO\n"
+        "  #\n"
+        "  # [Unknown]:[Unknown]\n"
+        "  #\n"
+        "  # { inferred_type=boolean, variable_id=power }\n"
+        "  # Type for state variable 'power' was inferred as 'boolean'.\n"
+        "  power:\n"
+    ) in annotated
+    assert yaml.safe_load(annotated) == yaml.safe_load(plain)
+
+
+def test_annotate_driver_yaml_places_orphan_flags_in_header() -> None:
+    plain = "id: dummy_device\nsimulator: {}\n"
+    review = ReviewReport(
+        flags=(
+            ReviewFlag(
+                code=ReviewCode.MISSING_DISCOVERY_FINGERPRINT,
+                field="discovery",
+                message="Discovery fingerprints require review.",
+            ),
+        )
+    )
+
+    annotated = annotate_driver_yaml(plain, review)
+
+    assert annotated.startswith(
+        "#TODO\n"
+        "#\n"
+        "# [Unknown]:[Unknown]\n"
+        "#\n"
+        "# { [Empty] }\n"
+        "# Discovery fingerprints require review.\n"
+        "id: dummy_device\n"
+    )
+    assert yaml.safe_load(annotated) == yaml.safe_load(plain)
+
+
+def test_annotate_driver_yaml_uses_explicit_source_reference() -> None:
+    plain = "simulator: {}\n"
+    review = ReviewReport(
+        flags=(
+            ReviewFlag(
+                code=ReviewCode.SIMULATOR_AUTO,
+                field="simulator",
+                message="Simulator requires review.",
+                source_path="index.js",
+                source_line=42,
+            ),
+        )
+    )
+
+    annotated = annotate_driver_yaml(plain, review)
+
+    assert "# index.js:42\n" in annotated
+    assert yaml.safe_load(annotated) == yaml.safe_load(plain)

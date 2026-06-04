@@ -53,7 +53,7 @@ def build_review_sidecar(
 def write_review_json(path: Path, report: ReviewSidecarReport) -> None:
     """Write review JSON with stable formatting."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = report.model_dump(mode="json")
+    payload = report.model_dump(mode="json", exclude_none=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 

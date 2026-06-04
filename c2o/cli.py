@@ -19,7 +19,7 @@ from c2o.emit.decline import (
     declined_json_path_for_output,
     write_declined_json,
 )
-from c2o.emit.driver import write_avcdriver, write_avcdriver_validated
+from c2o.emit.driver import write_avcdriver, write_avcdriver_todo, write_avcdriver_validated
 from c2o.emit.review import build_review_sidecar, review_json_path_for_output, write_review_json
 from c2o.emit.siblings import (
     feedbacks_yml_path_for_output,
@@ -101,6 +101,7 @@ _prompter_override: Prompter | None = None
 
 _UNSET = object()
 _LOGGER = logging.getLogger("c2o")
+ConversionMode = Literal["strict", "lenient", "todo"]
 
 
 @dataclass(frozen=True)
@@ -165,17 +166,26 @@ def _decline_stderr(module_id: str, blockers: tuple[Blocker, ...]) -> None:
     )
 
 
-def _resolve_conversion_mode(*, strict: bool, lenient: bool) -> Literal["strict", "lenient"]:
-    if strict and lenient:
-        raise typer.BadParameter("--strict and --lenient cannot be used together")
+def _resolve_conversion_mode(*, strict: bool, lenient: bool, todo: bool) -> ConversionMode:
+    selected = [
+        name
+        for name, enabled in (
+            ("--strict", strict),
+            ("--lenient", lenient),
+            ("--todo", todo),
+        )
+        if enabled
+    ]
+    if len(selected) > 1:
+        raise typer.BadParameter(f"{', '.join(selected)} cannot be used together")
+    if todo:
+        return "todo"
     return "lenient" if lenient else "strict"
 
 
 def _validate_output_args(*, output: str | None, output_root: str | None) -> None:
     if output is not None and output_root is not None:
         raise typer.BadParameter("--output and --output-root cannot be used together")
-    if output is None and output_root is None:
-        raise typer.BadParameter("one of --output or --output-root is required")
 
 
 def _resolve_output_path(
@@ -187,9 +197,8 @@ def _resolve_output_path(
 ) -> Path:
     if output is not None:
         return Path(output)
-    if output_root is None:
-        raise typer.BadParameter("one of --output or --output-root is required")
-    return Path(output_root) / CATEGORY_TO_DIR[category] / f"{module_id}.avcdriver"
+    root = output_root if output_root is not None else "./out"
+    return Path(root) / CATEGORY_TO_DIR[category] / f"{module_id}.avcdriver"
 
 
 def _resolve_declined_output_path(
@@ -200,9 +209,8 @@ def _resolve_declined_output_path(
 ) -> Path:
     if output is not None:
         return Path(output)
-    if output_root is None:
-        raise typer.BadParameter("one of --output or --output-root is required")
-    return Path(output_root) / f"{module_id}.avcdriver"
+    root = output_root if output_root is not None else "./out"
+    return Path(root) / f"{module_id}.avcdriver"
 
 
 def _sorted_review_flags(review: ReviewReport) -> list[ReviewFlag]:
@@ -219,7 +227,7 @@ def _strict_failure_stderr(review: ReviewReport) -> None:
 
 
 def _apply_review_policy(
-    mode: Literal["strict", "lenient"],
+    mode: ConversionMode,
     review: ReviewReport,
     *,
     out_path: Path,
@@ -353,7 +361,7 @@ def validate_upstream_or_exit(driver_path: Path) -> UpstreamValidationResult:
 
 def _write_driver_output(
     *,
-    mode: Literal["strict", "lenient"],
+    mode: ConversionMode,
     out_path: Path,
     sections: ExtractedModuleSections,
 ) -> None:
@@ -370,6 +378,8 @@ def _write_driver_output(
                 sys.stderr.flush()
             _log_schema_validation_result(out_path, result)
             raise typer.Exit(code=1)
+    elif mode == "todo":
+        write_avcdriver_todo(out_path, sections)
     else:
         write_avcdriver(out_path, sections)
 
@@ -978,7 +988,7 @@ def convert(
     output_root: str | None = typer.Option(
         None,
         "--output-root",
-        help="Base directory for <category>/<id>.avcdriver output.",
+        help="Base directory for <category>/<id>.avcdriver output. Defaults to ./out.",
     ),
     strict: bool = typer.Option(
         False,
@@ -993,6 +1003,13 @@ def convert(
         help="Relax review handling for eligible modules; never overrides a decline.",
         show_default=False,
     ),
+    todo: bool = typer.Option(
+        False,
+        "--todo",
+        "-todo",
+        help="Write lenient output with #TODO review comments in the .avcdriver YAML.",
+        show_default=False,
+    ),
     keep_temp: bool = typer.Option(
         False,
         "--keep-temp",
@@ -1005,7 +1022,7 @@ def convert(
     ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
-    mode = _resolve_conversion_mode(strict=strict, lenient=lenient)
+    mode = _resolve_conversion_mode(strict=strict, lenient=lenient, todo=todo)
     _validate_output_args(output=output, output_root=output_root)
     emit(_LOGGER, logging.DEBUG, "source_resolution_start", raw=source)
     try:

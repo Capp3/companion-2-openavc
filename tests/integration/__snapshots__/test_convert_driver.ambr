@@ -227,6 +227,366 @@
   
   '''
 # ---
+# name: test_convert_bmd_writes_valid_todo_avcdriver_golden
+  '''
+  #TODO
+  #
+  # companion/manifest.json:[Unknown]
+  #
+  # { new=bmd_webpresenter, old=bmd-webpresenter }
+  # Driver id was coerced from 'bmd-webpresenter' to 'bmd_webpresenter'.
+  id: bmd_webpresenter
+  name: WebPresenter
+  manufacturer: Blackmagic Design
+  category: streaming
+  version: 2.1.3
+  author: Peter Daniel
+  transport: tcp
+  description: Live stream from any SDI video source direct to YouTube, Facebook, Twitter and more
+  source_url: https://github.com/bitfocus/companion-module-bmd-webpresenter
+  delimiter: "\n"
+  help:
+    overview: Module to control and monitor the [Blackmagic Design Web Presenter HD and 4K](https://www.blackmagicdesign.com/products/blackmagicwebpresenter).
+      This module does not support the discontinued USB only **Web Presenter** product.
+    setup: "Once connection to the device has been established the stream 'Video Mode', 'Platform' and 'Quality'\
+      \ action parameters will be populated with the options that the device supports. If no device connection\
+      \ is possible then these parameters will be unavailable. The 'Server' and 'Stream Key' will not be\
+      \ pre-populated. Use the Blackmagic WebPresenter desktop app to discover the valid 'Server' options\
+      \ for your platform. Consult your streaming platform service provider for the 'Stream Key'.\n\nPlease\
+      \ log issues and feature requests on [github](https://github.com/bitfocus/companion-module-bmd-webpresenter)."
+  #TODO
+  #
+  # [Unknown]:[Unknown]
+  #
+  # { missing=mdns,ssdp,amx_ddp,tcp_probe,udp_probe,python,hostname,oui,snmp_pen }
+  # Companion modules do not statically expose mdns/ssdp/amx_ddp/tcp_probe/udp_probe/python/hostname/oui/snmp_pen fingerprints; extend by hand if the device supports them.
+  discovery:
+    port_open:
+    - 9977
+    manufacturer_alias:
+    - Blackmagic Design
+    - Blackmagic
+  default_config:
+    host: ''
+    port: 9977
+    poll_interval: 1
+  config_schema:
+    host:
+      type: string
+      label: Device IP
+      required: true
+    port:
+      type: integer
+      label: Device Port
+      min: 1
+      max: 65535
+  state_variables:
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=model }
+    # Type for state variable 'model' was inferred as 'string'.
+    model:
+      label: Device Model
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=label }
+    # Type for state variable 'label' was inferred as 'string'.
+    label:
+      label: Device Label
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=software }
+    # Type for state variable 'software' was inferred as 'string'.
+    software:
+      label: Device Software
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=video_mode }
+    # Type for state variable 'video_mode' was inferred as 'string'.
+    video_mode:
+      label: Video Mode
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=platform }
+    # Type for state variable 'platform' was inferred as 'string'.
+    platform:
+      label: Platform
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=server }
+    # Type for state variable 'server' was inferred as 'string'.
+    server:
+      label: Server
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=key }
+    # Type for state variable 'key' was inferred as 'string'.
+    key:
+      label: Stream Key
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=quality }
+    # Type for state variable 'quality' was inferred as 'string'.
+    quality:
+      label: Stream Quality
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=stream_state }
+    # Type for state variable 'stream_state' was inferred as 'string'.
+    stream_state:
+      label: Streaming State
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=stream_duration }
+    # Type for state variable 'stream_duration' was inferred as 'string'.
+    stream_duration:
+      label: Streaming Duration
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=call, inferred_type=string, variable_id=stream_duration_HH }
+    # Type for state variable 'stream_duration_HH' was inferred as 'string'.
+    stream_duration_HH:
+      label: Streaming Duration (Hours)
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=call, inferred_type=string, variable_id=stream_duration_MM }
+    # Type for state variable 'stream_duration_MM' was inferred as 'string'.
+    stream_duration_MM:
+      label: Streaming Duration (Minutes)
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=call, inferred_type=string, variable_id=stream_duration_SS }
+    # Type for state variable 'stream_duration_SS' was inferred as 'string'.
+    stream_duration_SS:
+      label: Streaming Duration (Seconds)
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=stream_bitrate }
+    # Type for state variable 'stream_bitrate' was inferred as 'string'.
+    stream_bitrate:
+      label: Stream Bitrate
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=cache }
+    # Type for state variable 'cache' was inferred as 'string'.
+    cache:
+      label: Cache Used
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=passphrase }
+    # Type for state variable 'passphrase' was inferred as 'string'.
+    passphrase:
+      label: Passphrase
+      type: string
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { evidence=fallback, inferred_type=string, variable_id=URL }
+    # Type for state variable 'URL' was inferred as 'string'.
+    URL:
+      label: Current URL
+      type: string
+  #TODO
+  #
+  # [Unknown]:[Unknown]
+  #
+  # { action_key=stream, reason=toggle_branch }
+  # Action 'stream' contains runtime-state branching that cannot be expressed in YAML.
+  commands:
+    stream_start:
+      label: Streaming Control
+      params: {}
+      send: "STREAM STATE:\nAction: Start\n\n"
+    stream_stop:
+      label: Streaming Control
+      params: {}
+      send: "STREAM STATE:\nAction: Stop\n\n"
+  responses:
+  - match: ^Label:\s*(.+)$
+    set:
+      label: $1
+  - match: ^Model:\s*(.+)$
+    set:
+      model: $1
+  - match: ^Software\ Release:\s*(.+)$
+    set:
+      software: $1
+  - match: ^Video\ Mode:\s*(.+)$
+    set:
+      video_mode: $1
+  - match: ^Current\ Quality\ Level:\s*(.+)$
+    set:
+      quality: $1
+  - match: ^Current\ Server:\s*(.+)$
+    set:
+      server: $1
+  - match: ^Current\ Platform:\s*(.+)$
+    set:
+      platform: $1
+  - match: ^Stream\ Key:\s*(.+)$
+    set:
+      key: $1
+  - match: ^Password:\s*(.+)$
+    set:
+      passphrase: $1
+  - match: ^Current\ URL:\s*(.+)$
+    set:
+      URL: $1
+  - match: ^Status:\s*(.+)$
+    set:
+      stream_state: $1
+  - match: ^Duration:\s*(.+)$
+    set:
+      stream_duration: $1
+  - match: ^Bitrate:\s*(.+)$
+    set:
+      stream_bitrate: $1
+  - match: ^Cache\ Used:\s*(.+)$
+    set:
+      cache: $1
+  polling:
+    queries:
+    - "STREAM STATE:\n\n"
+  #TODO
+  #
+  # companion/manifest.json:[Unknown]
+  #
+  # { [Empty] }
+  # Compatible model entries are derived from Companion manifest products and default to untested confidence.
+  compatible_models:
+  - manufacturer: Blackmagic Design
+    models:
+    - WebPresenter HD
+    - WebPresenter 4K
+    confidence: untested
+  #TODO
+  #
+  # [Unknown]:[Unknown]
+  #
+  # { [Empty] }
+  # The simulator block was auto-generated from state variables and commands. All entries require human review before the driver is considered production-ready.
+  simulator:
+    initial_state:
+      model: ''
+      label: ''
+      software: ''
+      video_mode: ''
+      platform: ''
+      server: ''
+      key: ''
+      quality: ''
+      stream_state: ''
+      stream_duration: ''
+      stream_duration_HH: ''
+      stream_duration_MM: ''
+      stream_duration_SS: ''
+      stream_bitrate: ''
+      cache: ''
+      passphrase: ''
+      URL: ''
+    controls:
+    - type: indicator
+      key: model
+      label: Device Model
+    - type: indicator
+      key: label
+      label: Device Label
+    - type: indicator
+      key: software
+      label: Device Software
+    - type: indicator
+      key: video_mode
+      label: Video Mode
+    - type: indicator
+      key: platform
+      label: Platform
+    - type: indicator
+      key: server
+      label: Server
+    - type: indicator
+      key: key
+      label: Stream Key
+    - type: indicator
+      key: quality
+      label: Stream Quality
+    - type: indicator
+      key: stream_state
+      label: Streaming State
+    - type: indicator
+      key: stream_duration
+      label: Streaming Duration
+    - type: indicator
+      key: stream_duration_HH
+      label: Streaming Duration (Hours)
+    - type: indicator
+      key: stream_duration_MM
+      label: Streaming Duration (Minutes)
+    - type: indicator
+      key: stream_duration_SS
+      label: Streaming Duration (Seconds)
+    - type: indicator
+      key: stream_bitrate
+      label: Stream Bitrate
+    - type: indicator
+      key: cache
+      label: Cache Used
+    - type: indicator
+      key: passphrase
+      label: Passphrase
+    - type: indicator
+      key: URL
+      label: Current URL
+  
+  '''
+# ---
 # name: test_convert_dummy_writes_valid_avcdriver_golden
   '''
   id: dummy_device

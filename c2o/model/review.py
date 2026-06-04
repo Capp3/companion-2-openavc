@@ -32,6 +32,8 @@ class ReviewFlag(BaseModel):
     field: str
     message: str
     details: dict[str, str] = Field(default_factory=dict)
+    source_path: str | None = Field(default=None, exclude=True)
+    source_line: int | None = Field(default=None, exclude=True)
 
 
 class ReviewReport(BaseModel):

@@ -49,14 +49,15 @@ uv run c2o convert bmd-webpresenter --output-root out/drivers
 
 Options:
 
-- `-o, --output PATH` - explicit output `.avcdriver` path. The path stem is used for sidecar and sibling filenames.
-- `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. Mutually exclusive with `-o`.
+- `-o, --output PATH` - explicit output `.avcdriver` path. The path stem is used for sidecar and sibling filenames. Mutually exclusive with `--output-root`.
+- `--output-root DIR` - derive `<category>/<id>.avcdriver` under `DIR`. **Defaults to `./out`** if neither flag is given.
 - `--strict` - default review policy. Eligible modules with unresolved review flags exit 1.
 - `--lenient`, `-l` - write `.review.json` for unresolved review flags and exit 0 for eligible modules.
+- `--todo`, `-todo` - same policy as `--lenient`, plus `#TODO` comments in the `.avcdriver` before flagged YAML fields.
 - `--interactive/--no-interactive` - prompt for metadata fields C2O cannot safely infer.
 - `--keep-temp` - preserve cloned remote sources for debugging.
 
-`--strict` and `--lenient` are mutually exclusive. Passing both exits before source resolution.
+`--strict`, `--lenient`, and `--todo` are mutually exclusive. Passing more than one exits before source resolution.
 
 ### Files Written By Convert
 
@@ -79,6 +80,14 @@ For eligible modules with review flags in lenient mode:
 - `<stem>.avcdriver` - best-effort generated driver.
 - `<stem>.review.json` - machine-readable review flags.
 - Exit code 0.
+
+For eligible modules with review flags in todo mode:
+
+- `<stem>.avcdriver` - best-effort generated driver with comment-only `#TODO` review blocks.
+- `<stem>.review.json` - machine-readable review flags.
+- Exit code 0.
+
+Todo comments do not change YAML data and are ignored by validation. Source references are best-effort: manifest-derived flags point to `companion/manifest.json:[Unknown]`; other flags use `[Unknown]:[Unknown]` until extractor-level line tracking lands.
 
 For eligible modules with review flags in strict mode:
 
@@ -121,9 +130,9 @@ uv run c2o -vv --log-format json inspect bmd-webpresenter
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Success, including lenient eligible conversions with `.avcdriver` and review sidecars. |
+| 0 | Success, including lenient/todo eligible conversions with `.avcdriver` and review sidecars. |
 | 1 | Strict-mode review failure, validation failure, or general input/runtime failure. |
-| 2 | YAML suitability decline. Declines are not overridden by `--lenient`. |
+| 2 | YAML suitability decline. Declines are not overridden by `--lenient` or `--todo`. |
 
 ## Current Limits
 
