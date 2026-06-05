@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "c2o"
-version = "0.0.0"
+version = "0.1.0"
 authors = [{ name = "Cappy" }]
 description = "Convert Bitfocus Companion modules into OpenAVC .avcdriver YAML drivers"
 readme = "README.md"

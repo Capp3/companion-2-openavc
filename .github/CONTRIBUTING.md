@@ -1,249 +1,84 @@
 # Contributing to Companion-2-OpenAVC
 
-## Table of Contents
+Thanks for helping improve Companion-2-OpenAVC (C2O). C2O is a Python CLI that converts Bitfocus Companion modules into OpenAVC `.avcdriver` YAML, and declines modules that require manual OpenAVC Python drivers.
 
-- [Code of Conduct](#code-of-conduct)
-- [How Can I Contribute?](#how-can-i-contribute)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Style Guidelines](#style-guidelines)
-- [Submitting Changes](#submitting-changes)
-- [Reporting Issues](#reporting-issues)
+## Useful Contributions
 
-## Code of Conduct
-
-This project adheres to a code of conduct that all contributors are expected to follow. By participating, you agree to:
-
-- Be respectful and inclusive
-- Accept constructive criticism gracefully
-- Focus on what is best for the community
-- Show empathy towards other community members
-
-## How Can I Contribute?
-
-### Types of Contributions
-
-We welcome various types of contributions:
-
-1. **Bug Reports** - Report issues with existing configurations
-2. **Feature Requests** - Suggest new features or improvements
-3. **Documentation** - Improve or add documentation
-4. **Code Contributions** - Fix bugs or implement features
-5. **Configuration Improvements** - Enhance existing configs (gitignore, editorconfig, etc.)
-6. **Template Testing** - Test the template with different project types
+- **Bug reports** for incorrect conversion output, unexpected declines, crashes, or validation failures.
+- **Fixture coverage** for additional Companion modules, especially modules that exercise extractor edge cases.
+- **Extractor improvements** for metadata, config fields, commands, responses, polling, discovery, simulator hints, feedbacks, and presets.
+- **Documentation updates** for CLI usage, release process, or contributor workflows.
+- **Tests** that lock in conversion behavior, decline behavior, and upstream validation compatibility.
 
 ## Getting Started
 
-### Prerequisites
+Requirements:
 
-- Git installed on your system
-- Basic understanding of development tools and configurations
-- Familiarity with the technologies used in the template
+- Python 3.12 or newer.
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
+- Git.
 
-### Fork and Clone
+Clone and set up the project:
 
-1. Fork the repository on GitHub
-2. Clone your fork locally:
-
-   ```bash
-   git clone https://github.com/yourusername/vibe_dev_template.git
-   cd vibe_dev_template
-   ```
-
-3. Add the upstream repository:
-
-   ```bash
-   git remote add upstream https://github.com/original-owner/vibe_dev_template.git
-   ```
-
-4. Keep your fork synchronized:
-   ```bash
-   git fetch upstream
-   git checkout main
-   git merge upstream/main
-   ```
+```bash
+git clone https://github.com/Capp3/companion-2-openavc.git
+cd companion-2-openavc
+uv sync --all-extras
+uv run c2o --help
+```
 
 ## Development Workflow
 
-### Creating a Branch
-
-Always create a new branch for your work:
+Create a focused branch for each change:
 
 ```bash
-git checkout -b feature/your-feature-name
-# or
-git checkout -b fix/your-bug-fix
-# or
-git checkout -b docs/your-documentation-update
+git checkout -b feature/your-change
 ```
 
-Branch naming conventions:
-
-- `feature/` - New features or enhancements
-- `fix/` - Bug fixes
-- `docs/` - Documentation changes
-- `refactor/` - Code refactoring
-- `test/` - Adding or updating tests
-
-### Making Changes
-
-1. Make your changes in your feature branch
-2. Test your changes thoroughly
-3. Ensure your changes don't break existing functionality
-4. Keep commits focused and atomic
-5. Write clear, descriptive commit messages
-
-### Commit Message Guidelines
-
-Follow the Conventional Commits specification:
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-Types:
-
-- `feat` - New feature
-- `fix` - Bug fix
-- `docs` - Documentation changes
-- `style` - Code style changes (formatting, no code change)
-- `refactor` - Code refactoring
-- `test` - Adding or updating tests
-- `chore` - Maintenance tasks
-
-Examples:
+Before opening a pull request, run the local quality gate:
 
 ```bash
-git commit -m "feat(vscode): add Go language settings file"
-git commit -m "fix(gitignore): correct Python bytecode patterns"
-git commit -m "docs(readme): improve installation instructions"
+make quality
 ```
 
-## Style Guidelines
+Useful narrower commands:
 
-### General Principles
+```bash
+uv run pytest
+uv run ruff check .
+uv run mypy c2o tests
+make docs-build
+uv build
+```
 
-- **Universality** - Keep the template language-agnostic where possible
-- **Modularity** - Organize configurations into logical, reusable components
-- **Clarity** - Use clear, descriptive names and comprehensive comments
-- **Standards** - Follow industry best practices and standards
+## Project Rules
 
-### File-Specific Guidelines
+- C2O emits YAML `.avcdriver` files only. Do not add OpenAVC Python driver generation.
+- The upstream OpenAVC driver spec and validator are the source of truth for emitted fields and validation behavior.
+- Do not modify the source Companion module during conversion; C2O is read-only over its input.
+- Declined modules should produce structured `.declined.json` reports and exit code 2.
+- Generated review sidecars and TODO YAML comments should remain deterministic so snapshots stay useful.
 
-#### .gitignore
+## Tests And Fixtures
 
-- Group patterns by category with clear section headers
-- Add comments for non-obvious patterns
-- Keep universal patterns at the top
-- Language-specific patterns in commented sections at bottom
+- Add or update tests with every behavior change.
+- Prefer focused fixtures that demonstrate the Companion pattern being extracted or declined.
+- Keep golden snapshots intentional. If a snapshot changes, explain why in the PR.
+- Run vendored upstream validation for emitted `.avcdriver` outputs when changing YAML emission.
 
-#### VSCode Settings
+## Pull Requests
 
-- Universal settings in `settings.json`
-- Language-specific settings in `settings.<language>.json`
-- Include comments explaining non-obvious configurations
-- Follow JSON formatting standards
+Before submitting:
 
-#### Documentation
+- Ensure `make quality` passes.
+- Update docs or changelog entries when user-facing behavior changes.
+- Keep commits focused and describe the reason for the change.
+- Include the relevant commands you ran in the PR description.
 
-- Use clear, concise language
-- Include code examples where appropriate
-- Keep line length reasonable (80-120 characters)
-- Use proper markdown formatting
+## Releases
 
-#### Makefiles
-
-- Include clear comments for each target
-- Add help text with `##` for all public targets
-- Follow standard Make conventions
-- Test on multiple platforms when possible
-
-## Submitting Changes
-
-### Before Submitting
-
-1. **Test your changes** - Ensure everything works as expected
-2. **Update documentation** - Update relevant documentation
-3. **Check for conflicts** - Rebase on latest main if needed
-4. **Review your changes** - Self-review your code
-
-### Pull Request Process
-
-1. Push your changes to your fork:
-
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-2. Create a Pull Request on GitHub
-
-3. Fill out the PR template completely:
-
-   - Clear title describing the change
-   - Detailed description of what changed and why
-   - Reference any related issues
-   - Include screenshots if relevant
-
-4. Ensure CI checks pass (if applicable)
-
-5. Respond to review feedback promptly
-
-6. Once approved, a maintainer will merge your PR
-
-### Pull Request Checklist
-
-- [ ] Branch is up to date with main
-- [ ] Code follows style guidelines
-- [ ] Documentation is updated
-- [ ] Commit messages follow conventions
-- [ ] Changes are tested
-- [ ] No unnecessary files included
-- [ ] PR description is clear and complete
-
-## Reporting Issues
-
-### Bug Reports
-
-When reporting bugs, include:
-
-- Clear, descriptive title
-- Steps to reproduce the issue
-- Expected behavior
-- Actual behavior
-- Environment details (OS, tool versions, etc.)
-- Screenshots if applicable
-
-### Feature Requests
-
-When suggesting features:
-
-- Clear description of the feature
-- Use case and benefits
-- Potential implementation approach
-- Examples from other projects (if applicable)
-
-## Questions?
-
-If you have questions about contributing:
-
-1. Check existing issues and discussions
-2. Review the documentation
-3. Open a new discussion or issue
-
-## Recognition
-
-Contributors will be recognized in:
-
-- GitHub contributors list
-- Release notes for significant contributions
-- Project documentation (if appropriate)
+Releases are GitHub-only for v1. See `.github/workflows/README.md` for the release checklist and workflow details.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project.
-
-Thank you for contributing to make this template better for everyone!
+By contributing, you agree that your contributions are licensed under this project's MIT license.
