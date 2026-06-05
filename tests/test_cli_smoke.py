@@ -19,7 +19,7 @@ def test_cli_help_exits_zero() -> None:
 def test_version_prints_package_version() -> None:
     result = CliRunner().invoke(app, ["version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.0.0"
+    assert result.stdout.strip() == "0.1.0"
     assert result.stderr == ""
 
 
@@ -27,14 +27,14 @@ def test_global_verbose_flag_before_subcommand_is_accepted() -> None:
     result = CliRunner().invoke(app, ["-v", "version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.0.0"
+    assert result.stdout.strip() == "0.1.0"
 
 
 def test_global_json_log_format_before_subcommand_is_accepted() -> None:
     result = CliRunner().invoke(app, ["--log-format", "json", "version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.0.0"
+    assert result.stdout.strip() == "0.1.0"
 
 
 def test_invalid_log_format_fails() -> None:

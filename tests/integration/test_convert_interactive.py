@@ -37,7 +37,7 @@ def test_convert_interactive_resolves_metadata_then_strict_fails_on_remaining_fl
 
     result = CliRunner().invoke(
         app,
-        ["convert", str(root), "-o", str(out_avc), "--interactive"],
+        ["convert", str(root), "-o", str(out_avc), "--interactive", "--strict"],
         input="6\n1\n\n",
     )
 

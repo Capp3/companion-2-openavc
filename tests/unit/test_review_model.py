@@ -35,6 +35,25 @@ def test_review_flag_is_frozen() -> None:
         flag.field = "name"
 
 
+def test_review_flag_source_metadata_is_internal_to_default_dump() -> None:
+    flag = ReviewFlag(
+        code=ReviewCode.SIMULATOR_AUTO,
+        field="simulator",
+        message="Simulator requires review.",
+        source_path="index.js",
+        source_line=42,
+    )
+
+    assert flag.source_path == "index.js"
+    assert flag.source_line == 42
+    assert flag.model_dump() == {
+        "code": ReviewCode.SIMULATOR_AUTO,
+        "field": "simulator",
+        "message": "Simulator requires review.",
+        "details": {},
+    }
+
+
 def test_review_report_aggregates_flags_by_code() -> None:
     id_flag = ReviewFlag(
         code=ReviewCode.ID_COERCED,

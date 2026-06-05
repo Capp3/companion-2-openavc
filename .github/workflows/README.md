@@ -1,94 +1,37 @@
 # GitHub Actions Workflows
 
-This directory is a placeholder for GitHub Actions workflow files. Add your CI/CD workflows here as needed for your specific project.
+This directory contains the CI, docs, dependency-update, and release automation for Companion-2-OpenAVC (C2O).
 
-## Example Workflows
+## Workflows
 
-Below are some example workflow ideas you might want to implement:
+- `ci.yml` runs on pushes to `main` and on pull requests. It installs dependencies with `uv`, runs Ruff, isort, Black, mypy, pytest with coverage, builds the package, and smoke-checks the vendored OpenAVC validator.
+- `docs.yml` runs on pushes to `main` and on pull requests. It builds the MkDocs site with `mkdocs build --strict` and uploads the generated `site/` directory as an artifact.
+- `release.yml` is manual (`workflow_dispatch`). It accepts a release tag such as `v0.1.0`, runs tests, builds wheel/sdist artifacts with `uv build`, and creates a GitHub release with `dist/*` attached.
+- `dependabot.yml` checks weekly for `uv` dependency updates and GitHub Actions updates.
 
-### Example 1: Documentation Build and Deploy
+## Release Checklist
 
-```yaml
-# .github/workflows/docs.yml
-name: Deploy Documentation
+Releases are GitHub-only for v1. Do not publish C2O to PyPI.
 
-on:
-  push:
-    branches:
-      - main
+1. Ensure `main` is green in CI.
+2. Confirm `pyproject.toml` and `c2o/__init__.py` contain the release version.
+3. Confirm `CHANGELOG.md` has a dated entry for the release.
+4. Run local release verification:
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-      - run: pip install mkdocs mkdocs-bootswatch
-      - run: mkdocs build
-      - uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-```
+   ```bash
+   make ci
+   make docs-build
+   uv build
+   ```
 
-### Example 2: Linting and Validation
+5. Smoke-install the built wheel in a throwaway environment and verify:
 
-```yaml
-# .github/workflows/lint.yml
-name: Lint
+   ```bash
+   c2o version
+   c2o --help
+   ```
 
-on: [push, pull_request]
+6. Commit and merge the release-prep changes.
+7. Trigger `Release` from the GitHub Actions UI with the tag input, for example `v0.1.0`.
 
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate markdown files
-        uses: avto-dev/markdown-lint@v1
-        with:
-          args: '**/*.md'
-      - name: Validate YAML files
-        uses: ibiqlik/action-yamllint@v3
-```
-
-### Example 3: Template Testing
-
-```yaml
-# .github/workflows/test.yml
-name: Test Template
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test Makefile targets
-        run: make help
-      - name: Validate .editorconfig
-        uses: editorconfig-checker/action-editorconfig-checker@main
-```
-
-## Getting Started
-
-1. Create a new `.yml` file in this directory
-2. Define your workflow using the examples above as reference
-3. Commit and push to trigger the workflow
-4. View workflow results in the Actions tab of your repository
-
-## Resources
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Workflow Syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
-- [Marketplace](https://github.com/marketplace?type=actions) - Find pre-built actions
-
-## Note
-
-These are just examples. Customize workflows based on your project's specific needs.
+The release workflow creates the GitHub tag/release through `gh release create` and attaches the built wheel and sdist from `dist/`.

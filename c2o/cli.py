@@ -19,6 +19,7 @@ from c2o.emit.decline import (
     declined_json_path_for_output,
     write_declined_json,
 )
+from c2o.emit.driver import write_avcdriver, write_avcdriver_todo, write_avcdriver_validated
 from c2o.emit.review import build_review_sidecar, review_json_path_for_output, write_review_json
 from c2o.emit.siblings import (
     feedbacks_yml_path_for_output,
@@ -81,6 +82,7 @@ from c2o.source import ResolvedSource, SourceResolutionError, read_module_id, re
 from c2o.suitability.blockers import Blocker
 from c2o.suitability.gate import GateResult, assess_module
 from c2o.validate import UpstreamValidationResult, validate_upstream
+from c2o.validate.upstream import CATEGORY_TO_DIR
 
 app = typer.Typer(
     name="c2o",
@@ -99,6 +101,7 @@ _prompter_override: Prompter | None = None
 
 _UNSET = object()
 _LOGGER = logging.getLogger("c2o")
+ConversionMode = Literal["strict", "lenient", "todo"]
 
 
 @dataclass(frozen=True)
@@ -163,10 +166,53 @@ def _decline_stderr(module_id: str, blockers: tuple[Blocker, ...]) -> None:
     )
 
 
-def _resolve_conversion_mode(*, strict: bool, lenient: bool) -> Literal["strict", "lenient"]:
-    if strict and lenient:
-        raise typer.BadParameter("--strict and --lenient cannot be used together")
-    return "lenient" if lenient else "strict"
+def _resolve_conversion_mode(*, strict: bool, lenient: bool, todo: bool) -> ConversionMode:
+    selected = [
+        name
+        for name, enabled in (
+            ("--strict", strict),
+            ("--lenient", lenient),
+            ("--todo", todo),
+        )
+        if enabled
+    ]
+    if len(selected) > 1:
+        raise typer.BadParameter(f"{', '.join(selected)} cannot be used together")
+    if strict:
+        return "strict"
+    if todo:
+        return "todo"
+    return "lenient" if lenient else "todo"
+
+
+def _validate_output_args(*, output: str | None, output_root: str | None) -> None:
+    if output is not None and output_root is not None:
+        raise typer.BadParameter("--output and --output-root cannot be used together")
+
+
+def _resolve_output_path(
+    *,
+    output: str | None,
+    output_root: str | None,
+    module_id: str,
+    category: str,
+) -> Path:
+    if output is not None:
+        return Path(output)
+    root = output_root if output_root is not None else "./out"
+    return Path(root) / CATEGORY_TO_DIR[category] / f"{module_id}.avcdriver"
+
+
+def _resolve_declined_output_path(
+    *,
+    output: str | None,
+    output_root: str | None,
+    module_id: str,
+) -> Path:
+    if output is not None:
+        return Path(output)
+    root = output_root if output_root is not None else "./out"
+    return Path(root) / f"{module_id}.avcdriver"
 
 
 def _sorted_review_flags(review: ReviewReport) -> list[ReviewFlag]:
@@ -183,7 +229,7 @@ def _strict_failure_stderr(review: ReviewReport) -> None:
 
 
 def _apply_review_policy(
-    mode: Literal["strict", "lenient"],
+    mode: ConversionMode,
     review: ReviewReport,
     *,
     out_path: Path,
@@ -203,11 +249,6 @@ def _apply_review_policy(
             )
             _strict_failure_stderr(review)
             raise typer.Exit(code=1)
-        typer.echo(
-            "Eligible for conversion; YAML emitter not yet implemented (M22+). "
-            "No .avcdriver was written.",
-            err=True,
-        )
         return
 
     if len(review) == 0:
@@ -318,6 +359,39 @@ def validate_upstream_or_exit(driver_path: Path) -> UpstreamValidationResult:
         sys.stderr.flush()
     _log_schema_validation_result(driver_path, result)
     raise typer.Exit(code=1)
+
+
+def _write_driver_output(
+    *,
+    mode: ConversionMode,
+    out_path: Path,
+    sections: ExtractedModuleSections,
+) -> None:
+    if mode == "strict":
+        emit(_LOGGER, logging.DEBUG, "schema_validation_start", path=str(out_path))
+        result = write_avcdriver_validated(out_path, sections)
+        if result.passed:
+            _log_schema_validation_result(out_path, result)
+            if result.stdout:
+                typer.echo(result.stdout.rstrip("\n"))
+        else:
+            if result.stderr:
+                sys.stderr.write(result.stderr)
+                sys.stderr.flush()
+            _log_schema_validation_result(out_path, result)
+            raise typer.Exit(code=1)
+    elif mode == "todo":
+        write_avcdriver_todo(out_path, sections)
+    else:
+        write_avcdriver(out_path, sections)
+
+    emit(
+        _LOGGER,
+        logging.INFO,
+        "output_write",
+        path=str(out_path),
+        bytes=out_path.stat().st_size,
+    )
 
 
 def _load_registry() -> Registry:
@@ -907,11 +981,21 @@ def _render_inspect(root: Path, module_id: str, parsed: ParsedModule, gate: Gate
 @app.command()
 def convert(
     source: str = typer.Argument(help="Local path, GitHub URL, or bare module ID."),
-    output: str = typer.Option(..., "-o", "--output", help="Output .avcdriver path."),
+    output: str | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="Explicit output .avcdriver path.",
+    ),
+    output_root: str | None = typer.Option(
+        None,
+        "--output-root",
+        help="Base directory for <category>/<id>.avcdriver output. Defaults to ./out.",
+    ),
     strict: bool = typer.Option(
         False,
         "--strict",
-        help="Use strict review handling (default): exit 1 if review flags remain.",
+        help="Use strict review handling: exit 1 if review flags remain.",
         show_default=False,
     ),
     lenient: bool = typer.Option(
@@ -919,6 +1003,13 @@ def convert(
         "--lenient",
         "-l",
         help="Relax review handling for eligible modules; never overrides a decline.",
+        show_default=False,
+    ),
+    todo: bool = typer.Option(
+        False,
+        "--todo",
+        "-todo",
+        help="Write lenient output with #TODO review comments in the .avcdriver YAML (default).",
         show_default=False,
     ),
     keep_temp: bool = typer.Option(
@@ -933,7 +1024,8 @@ def convert(
     ),
 ) -> None:
     """Convert a Companion module to an OpenAVC .avcdriver file."""
-    mode = _resolve_conversion_mode(strict=strict, lenient=lenient)
+    mode = _resolve_conversion_mode(strict=strict, lenient=lenient, todo=todo)
+    _validate_output_args(output=output, output_root=output_root)
     emit(_LOGGER, logging.DEBUG, "source_resolution_start", raw=source)
     try:
         with resolve_source(source, keep_temp=keep_temp) as resolved:
@@ -943,9 +1035,13 @@ def convert(
             root = resolved.root
             module_id, parsed, gate = _assess_root(root)
             _log_gate_result(gate)
-            out_path = Path(output)
 
             if not gate.eligible:
+                out_path = _resolve_declined_output_path(
+                    output=output,
+                    output_root=output_root,
+                    module_id=module_id,
+                )
                 decline_path = declined_json_path_for_output(out_path)
                 report = build_declined_report(
                     source=str(root),
@@ -990,9 +1086,16 @@ def convert(
                 typer.echo(f"  manufacturer: {manifest.manufacturer}")
                 typer.echo(f"  author: {manifest.author}")
                 typer.echo(f"  unresolved review flags: {len(review)}")
-                review = _collect_review_report(root, parsed, manifest=manifest, review=review)
+                sections = _extract_module_sections(root, parsed, manifest=manifest, review=review)
             else:
-                review = _collect_review_report(root, parsed)
+                sections = _extract_module_sections(root, parsed)
+            review = sections.review
+            out_path = _resolve_output_path(
+                output=output,
+                output_root=output_root,
+                module_id=sections.manifest.id,
+                category=sections.manifest.category,
+            )
 
             _write_sibling_artifacts(parsed, out_path)
             _apply_review_policy(
@@ -1002,7 +1105,7 @@ def convert(
                 source=str(root),
                 module_id=module_id,
             )
-            # M22+: call validate_upstream_or_exit before writing .avcdriver YAML.
+            _write_driver_output(mode=mode, out_path=out_path, sections=sections)
     except SourceResolutionError as exc:
         _source_resolution_exit(exc)
 
