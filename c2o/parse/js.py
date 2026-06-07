@@ -22,9 +22,16 @@ _DEFAULT_JS_FILES = (
     "actions.js",
     "variables.js",
     "feedback.js",
+    "feedbacks.js",
     "presets.js",
     "upgrades.js",
+    "setup.js",
+    "config.js",
+    "choices.js",
 )
+
+# Large asset bundles that parse correctly but contain no extractable logic.
+_SKIP_JS_FILES: frozenset[str] = frozenset({"icons.js"})
 
 
 @dataclass
@@ -105,13 +112,38 @@ def parse_source(source: str, *, path: str = "<string>") -> Tree:
 
 
 def iter_js_files(root: Path) -> list[Path]:
-    """List parseable `.js` files at the module root."""
-    files: list[Path] = []
+    """List parseable `.js` files at the module root or ``src/`` subdirectory.
+
+    Checks root-level files first (flat layout used by older Companion modules
+    such as ``companion-module-bmd-webpresenter``).  If none are found, falls
+    back to every ``.js`` file in the ``src/`` subdirectory used by newer
+    modules (e.g. ``companion-module-panasonic-ptz``).
+
+    Files listed in :data:`_SKIP_JS_FILES` (e.g. large icon asset bundles) are
+    excluded from both search paths.
+    """
+    root_files: list[Path] = []
     for name in _DEFAULT_JS_FILES:
+        if name in _SKIP_JS_FILES:
+            continue
         path = root / name
         if path.is_file():
-            files.append(path)
-    return files
+            root_files.append(path)
+    if root_files:
+        return root_files
+
+    # Newer Companion modules place source files under src/.
+    src_dir = root / "src"
+    if src_dir.is_dir():
+        src_files = sorted(
+            p
+            for p in src_dir.iterdir()
+            if p.is_file() and p.suffix == ".js" and p.name not in _SKIP_JS_FILES
+        )
+        if src_files:
+            return src_files
+
+    return []
 
 
 def parse_module(root: Path) -> ParsedModule:
@@ -124,7 +156,7 @@ def parse_module(root: Path) -> ParsedModule:
         parsed.sources[rel] = text
         parsed.trees[rel] = parse_source(text, path=str(path))
     if not parsed.sources:
-        msg = f"{root}: no JavaScript source files found"
+        msg = f"{root}: no JavaScript source files found (checked root and src/)"
         raise ValueError(msg)
     return parsed
 
@@ -555,6 +587,59 @@ def _collect_clause_bindings(node: Node, source: str, names: set[str]) -> None:
         names.add(source[node.start_byte : node.end_byte])
     for child in node.children:
         _collect_clause_bindings(child, source, names)
+
+
+def collect_this_state_initializers(
+    parsed: ParsedModule,
+) -> list[tuple[str, Node, str]]:
+    """Return ``(key, value_node, source)`` pairs from ``this.state = { ... }`` initialisers.
+
+    Scans all methods across all parsed files for assignments of the form
+    ``this.state = { key: literal, ... }`` and returns every key/value pair found.
+    The first initialiser found wins for duplicate keys.
+    """
+    seen: set[str] = set()
+    results: list[tuple[str, Node, str]] = []
+
+    for rel, tree in parsed.trees.items():
+        source = parsed.sources[rel]
+        for node in _walk_nodes(tree.root_node):
+            if node.type != "assignment_expression":
+                continue
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            if left is None or right is None:
+                continue
+            if not _is_this_state(left, source):
+                continue
+            if right.type != "object":
+                continue
+            for pair in right.named_children:
+                if pair.type != "pair":
+                    continue
+                from c2o.parse.literals import pair_key as _pair_key
+
+                key = _pair_key(pair, source)
+                if key is None or key in seen:
+                    continue
+                value_node = pair.child_by_field_name("value")
+                if value_node is None:
+                    continue
+                seen.add(key)
+                results.append((key, value_node, source))
+
+    return results
+
+
+def _is_this_state(node: Node, source: str) -> bool:
+    """Return True if node is ``this.state``."""
+    if node.type != "member_expression":
+        return False
+    obj = node.child_by_field_name("object")
+    prop = node.child_by_field_name("property")
+    if obj is None or prop is None:
+        return False
+    return obj.type == "this" and node_text(prop, source) == "state"
 
 
 def find_symbol_references(

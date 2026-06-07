@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 
 from c2o.cli import app
 from c2o.validate import validate_upstream
+from tests.helpers import cli_output
 
 
 def test_convert_declined_udp_writes_golden_json(
@@ -126,7 +127,7 @@ def test_convert_rejects_multiple_review_modes(
         ["convert", str(dummy_device), "-o", str(out_avc), *mode_args],
     )
     assert result.exit_code == 2
-    assert expected in result.stderr
+    assert expected in cli_output(result)
     assert not out_avc.exists()
 
 
@@ -147,7 +148,7 @@ def test_convert_rejects_output_and_output_root_together(
     )
 
     assert result.exit_code == 2
-    assert "--output and --output-root cannot be used together" in result.stderr
+    assert "--output and --output-root cannot be used together" in cli_output(result)
 
 
 def test_convert_defaults_output_root_to_out_dir(

@@ -22,7 +22,7 @@
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "config_fields"}}
   {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "config_fields", "fields": {"config_schema": 2, "default_config": 2}, "review_flags": 0}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "state_variables"}}
-  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "state_variables", "fields": {"state_variables": 17}, "review_flags": 17}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "state_variables", "fields": {"state_variables": 17}, "review_flags": 21}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "commands"}}
   {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "commands", "fields": {"commands": 2}, "review_flags": 1}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "responses"}}
@@ -33,6 +33,8 @@
   {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "discovery", "fields": {"port_open": 1, "manufacturer_alias": 2}, "review_flags": 1}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "on_connect"}}
   {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "on_connect", "fields": {"commands": 0}, "review_flags": 0}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "auth"}}
+  {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "auth", "fields": {"detected": false}, "review_flags": 0}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "help"}}
   {"ts": "2024-01-01T00:00:00Z", "level": "INFO", "event": "extractor_complete", "module": "c2o", "details": {"extractor": "help", "fields": {"overview": true, "setup": true}, "review_flags": 0}}
   {"ts": "2024-01-01T00:00:00Z", "level": "DEBUG", "event": "extractor_start", "module": "c2o", "details": {"extractor": "simulator"}}

@@ -45,6 +45,11 @@ class ManifestSection(BaseModel):
     author: str = Field(min_length=1)
     description: str = Field(min_length=1)
     source_url: str | None = Field(default=None, pattern=r"^[Hh][Tt][Tt][Pp][Ss]?://")
+    verified: bool = False
+    simulated: bool = False
+    ports: tuple[int, ...] = ()
+    tags: tuple[str, ...] = ()
+    protocols: tuple[str, ...] = ()
 
 
 class TransportSection(BaseModel):
@@ -215,6 +220,7 @@ class DiscoverySection(BaseModel):
 
     port_open: tuple[int, ...] = ()
     manufacturer_alias: tuple[str, ...] = ()
+    oui: tuple[str, ...] = ()
 
 
 class CompatibleModelEntry(BaseModel):
@@ -234,6 +240,23 @@ class CompatibleModelsSection(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     compatible_models: tuple[CompatibleModelEntry, ...] = ()
+
+
+class AuthSection(BaseModel):
+    """Telnet login handshake configuration for prompt-based authentication."""
+
+    model_config = ConfigDict(frozen=True)
+
+    type: str = "telnet_login"
+    username_prompt: str | None = None
+    password_prompt: str | None = None
+    success_pattern: str | None = None
+    failure_pattern: str | None = None
+    username_field: str | None = None
+    password_field: str | None = None
+    skip_if_empty: bool | None = None
+    timeout_seconds: int | None = None
+    line_ending: str | None = None
 
 
 class OnConnectSection(BaseModel):

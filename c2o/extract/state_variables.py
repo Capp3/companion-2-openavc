@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from tree_sitter import Node
 
+from c2o.extract.identifiers import normalize_identifier
 from c2o.model.driver import StateVariableEntry, StateVariablesSection, StateVariableType
 from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
-from c2o.parse.js import ParsedModule, find_calls, node_text, resolve_array_via_pushes
-from c2o.parse.literals import UNRESOLVED, decode_object, pair_key
+from c2o.parse.cross_file import resolve_factory_call_definitions
+from c2o.parse.js import (
+    ParsedModule,
+    collect_this_state_initializers,
+    find_calls,
+    node_text,
+    resolve_array_via_pushes,
+)
+from c2o.parse.literals import UNRESOLVED, decode_js_value, decode_object, pair_key
 
 _TYPE_PRECEDENCE: tuple[StateVariableType, ...] = ("boolean", "integer", "number", "string")
 _BOOLEAN_METHODS = frozenset({"includes", "startsWith", "endsWith", "test"})
@@ -42,20 +50,54 @@ def extract_state_variables(
 ) -> tuple[StateVariablesSection, ReviewReport]:
     """Build state_variables from setVariableDefinitions() and infer types."""
     definitions = _collect_definitions(parsed)
-    if not definitions:
+
+    # If no setVariableDefinitions call exists, fall back to this.state initializers.
+    this_state_inits = collect_this_state_initializers(parsed)
+    this_state_defaults = _build_this_state_defaults(this_state_inits)
+
+    if not definitions and not this_state_inits:
         return StateVariablesSection(), ReviewReport()
 
-    candidates = _collect_type_candidates(parsed, {var_id for var_id, _ in definitions})
+    # Merge: setVariableDefinitions wins for label; this.state fills type/default gaps.
+    if not definitions:
+        definitions = [(key, key) for key, _, _ in this_state_inits]
+
+    known_ids = {var_id for var_id, _ in definitions}
+    candidates = _collect_type_candidates(parsed, known_ids)
+
+    # Augment candidates from this.state literal values.
+    for key, value_node, source in this_state_inits:
+        if key not in known_ids:
+            continue
+        candidate_type, evidence = _classify_value(value_node, source)
+        if candidate_type is not None:
+            candidates.setdefault(key, []).append((candidate_type, evidence))
+
     state_variables: dict[str, StateVariableEntry] = {}
     flags: list[ReviewFlag] = []
 
     for variable_id, label in definitions:
         final_type, evidence = _resolve_type(variable_id, candidates)
-        state_variables[variable_id] = StateVariableEntry(label=label, type=final_type)
+        default_val = this_state_defaults.get(variable_id)
+        output_id = normalize_identifier(variable_id)
+
+        values: tuple[str, ...] | None = None
+        if final_type == "enum" or (
+            final_type == "string" and isinstance(default_val, str) and default_val in {"on", "off"}
+        ):
+            values = ("on", "off")
+            final_type = "enum"
+
+        state_variables[output_id] = StateVariableEntry(
+            label=label,
+            type=final_type,
+            values=values,
+            default=default_val if default_val is not None else None,
+        )
         flags.append(
             ReviewFlag(
                 code=ReviewCode.INFERRED_STATE_TYPE,
-                field=f"state_variables.{variable_id}",
+                field=f"state_variables.{output_id}",
                 message=(
                     f"Type for state variable '{variable_id}' was inferred as '{final_type}'."
                 ),
@@ -66,8 +108,31 @@ def extract_state_variables(
                 },
             )
         )
+        if output_id != variable_id:
+            flags.append(
+                ReviewFlag(
+                    code=ReviewCode.VARIABLE_ID_NORMALIZED,
+                    field=f"state_variables.{output_id}",
+                    message=(
+                        f"State variable id '{variable_id}' was normalized to '{output_id}'."
+                    ),
+                    details={"old": variable_id, "new": output_id},
+                )
+            )
 
     return StateVariablesSection(state_variables=state_variables), ReviewReport(flags=tuple(flags))
+
+
+def _build_this_state_defaults(
+    inits: list[tuple[str, Node, str]],
+) -> dict[str, Any]:
+    """Build a dict of default values from this.state literal initialisers."""
+    defaults: dict[str, Any] = {}
+    for key, value_node, source in inits:
+        raw = decode_js_value(value_node, source)
+        if raw is not UNRESOLVED:
+            defaults[key] = raw
+    return defaults
 
 
 def _collect_definitions(parsed: ParsedModule) -> list[tuple[str, str]]:
@@ -85,9 +150,9 @@ def _collect_definitions(parsed: ParsedModule) -> list[tuple[str, str]]:
         return []
 
     arg = arg_nodes[0]
-    object_nodes: list[Node] = []
+    object_nodes: list[tuple[Node, str]] = []
     if arg.type == "array":
-        object_nodes = [child for child in arg.named_children if child.type == "object"]
+        object_nodes = [(child, source) for child in arg.named_children if child.type == "object"]
     elif arg.type == "identifier":
         resolved = resolve_array_via_pushes(
             source=source,
@@ -95,11 +160,15 @@ def _collect_definitions(parsed: ParsedModule) -> list[tuple[str, str]]:
             call_node=match.node,
         )
         if resolved is not None:
-            object_nodes = resolved
+            object_nodes = [(node, source) for node in resolved]
+    elif arg.type == "call_expression":
+        resolved_factory = resolve_factory_call_definitions(arg, parsed, source=source)
+        if resolved_factory is not None:
+            object_nodes = [(definition.node, definition.source) for definition in resolved_factory]
 
     definitions: list[tuple[str, str]] = []
-    for obj in object_nodes:
-        raw = decode_object(obj, source)
+    for obj, obj_source in object_nodes:
+        raw = decode_object(obj, obj_source)
         if raw is UNRESOLVED:
             continue
         field = cast(dict[str, object], raw)

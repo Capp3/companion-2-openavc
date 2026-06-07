@@ -54,6 +54,11 @@ def http_device(fixtures_dir: Path) -> Path:
     return fixtures_dir / "http-device"
 
 
+@pytest.fixture
+def panasonic_ptz(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "external" / "panasonic-ptz"
+
+
 @pytest.fixture(scope="session")
 def dummy_device_git_url(tmp_path_factory: pytest.TempPathFactory) -> str:
     """Build a bare git mirror of dummy-device and return a file:// URL."""
@@ -90,6 +95,7 @@ def dummy_device_git_url(tmp_path_factory: pytest.TempPathFactory) -> str:
     run_git(["init", "--bare", str(bare_repo)])
     run_git(["remote", "add", "origin", str(bare_repo)], cwd=worktree)
     run_git(["push", "origin", "HEAD:main"], cwd=worktree)
+    run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=bare_repo)
 
     return bare_repo.as_uri()
 

@@ -246,9 +246,21 @@ def test_bmd_webpresenter_fixture(bmd_webpresenter: Path) -> None:
 
     assert len(section.state_variables) == 17
     assert section.state_variables["model"].label == "Device Model"
-    assert section.state_variables["stream_duration_HH"].type == "string"
-    assert len(review) == 17
-    assert all(flag.code == ReviewCode.INFERRED_STATE_TYPE for flag in review)
+    assert section.state_variables["stream_duration_hh"].type == "string"
+    assert len(review.by_code(ReviewCode.INFERRED_STATE_TYPE)) == 17
+    assert review.has_code(ReviewCode.VARIABLE_ID_NORMALIZED)
+
+
+def test_panasonic_ptz_fixture_resolves_factory_variables(panasonic_ptz: Path) -> None:
+    section, review = extract_state_variables(parse_module(panasonic_ptz))
+
+    assert len(section.state_variables) >= 13
+    assert section.state_variables["power"].label == "Power ON/OFF"
+    assert section.state_variables["tally"].label == "Red Tally ON/OFF"
+    assert section.state_variables["pt_speed_var"].label == "Pan/Tilt Speed"
+    assert "ptSpeedVar" not in section.state_variables
+    assert len(review.by_code(ReviewCode.INFERRED_STATE_TYPE)) == len(section.state_variables)
+    assert review.has_code(ReviewCode.VARIABLE_ID_NORMALIZED)
 
 
 def test_unknown_vendor_fixture(unknown_vendor: Path) -> None:

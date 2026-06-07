@@ -21,6 +21,12 @@ class ReviewCode(StrEnum):
     COMPATIBLE_MODELS_CONFIDENCE = "compatible_models_confidence"
     SIMULATOR_AUTO = "simulator_auto"
     AUTHOR_DEFAULT = "author_default"
+    RESPONSE_UNRESOLVED = "response_unresolved"
+    VARIABLE_ID_NORMALIZED = "variable_id_normalized"
+    DISCOVERY_OUI_FROM_REGISTRY = "discovery_oui_from_registry"
+    PROTOCOL_INFERRED = "protocol_inferred"
+    CONFIG_DEFAULT_PORT_INFERRED = "config_default_port_inferred"
+    COMMAND_ID_NORMALIZED = "command_id_normalized"
 
 
 class ReviewFlag(BaseModel):

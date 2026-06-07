@@ -9,6 +9,17 @@
   author: Peter Daniel
   transport: tcp
   description: Live stream from any SDI video source direct to YouTube, Facebook, Twitter and more
+  verified: false
+  simulated: true
+  ports:
+  - 9977
+  tags:
+  - streaming
+  - tcp
+  - blackmagic-design
+  - blackmagic
+  protocols:
+  - blackmagic_design_tcp
   source_url: https://github.com/bitfocus/companion-module-bmd-webpresenter
   delimiter: "\n"
   help:
@@ -24,8 +35,8 @@
     port_open:
     - 9977
     manufacturer_alias:
-    - Blackmagic Design
-    - Blackmagic
+    - blackmagic design
+    - blackmagic
   default_config:
     host: ''
     port: 9977
@@ -71,13 +82,13 @@
     stream_duration:
       label: Streaming Duration
       type: string
-    stream_duration_HH:
+    stream_duration_hh:
       label: Streaming Duration (Hours)
       type: string
-    stream_duration_MM:
+    stream_duration_mm:
       label: Streaming Duration (Minutes)
       type: string
-    stream_duration_SS:
+    stream_duration_ss:
       label: Streaming Duration (Seconds)
       type: string
     stream_bitrate:
@@ -89,7 +100,7 @@
     passphrase:
       label: Passphrase
       type: string
-    URL:
+    url:
       label: Current URL
       type: string
   commands:
@@ -131,7 +142,7 @@
       passphrase: $1
   - match: ^Current\ URL:\s*(.+)$
     set:
-      URL: $1
+      url: $1
   - match: ^Status:\s*(.+)$
     set:
       stream_state: $1
@@ -165,13 +176,13 @@
       quality: ''
       stream_state: ''
       stream_duration: ''
-      stream_duration_HH: ''
-      stream_duration_MM: ''
-      stream_duration_SS: ''
+      stream_duration_hh: ''
+      stream_duration_mm: ''
+      stream_duration_ss: ''
       stream_bitrate: ''
       cache: ''
       passphrase: ''
-      URL: ''
+      url: ''
     controls:
     - type: indicator
       key: model
@@ -204,13 +215,13 @@
       key: stream_duration
       label: Streaming Duration
     - type: indicator
-      key: stream_duration_HH
+      key: stream_duration_hh
       label: Streaming Duration (Hours)
     - type: indicator
-      key: stream_duration_MM
+      key: stream_duration_mm
       label: Streaming Duration (Minutes)
     - type: indicator
-      key: stream_duration_SS
+      key: stream_duration_ss
       label: Streaming Duration (Seconds)
     - type: indicator
       key: stream_bitrate
@@ -222,7 +233,7 @@
       key: passphrase
       label: Passphrase
     - type: indicator
-      key: URL
+      key: url
       label: Current URL
   
   '''
@@ -243,6 +254,23 @@
   author: Peter Daniel
   transport: tcp
   description: Live stream from any SDI video source direct to YouTube, Facebook, Twitter and more
+  verified: false
+  simulated: true
+  ports:
+  - 9977
+  tags:
+  - streaming
+  - tcp
+  - blackmagic-design
+  - blackmagic
+  #TODO
+  #
+  # [Unknown]:[Unknown]
+  #
+  # { manufacturer=Blackmagic Design, protocol=blackmagic_design_tcp, transport=tcp }
+  # Protocol slug 'blackmagic_design_tcp' was inferred from manufacturer 'Blackmagic Design' and transport 'tcp'.
+  protocols:
+  - blackmagic_design_tcp
   source_url: https://github.com/bitfocus/companion-module-bmd-webpresenter
   delimiter: "\n"
   help:
@@ -264,8 +292,8 @@
     port_open:
     - 9977
     manufacturer_alias:
-    - Blackmagic Design
-    - Blackmagic
+    - blackmagic design
+    - blackmagic
   default_config:
     host: ''
     port: 9977
@@ -377,7 +405,13 @@
     #
     # { evidence=call, inferred_type=string, variable_id=stream_duration_HH }
     # Type for state variable 'stream_duration_HH' was inferred as 'string'.
-    stream_duration_HH:
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { new=stream_duration_hh, old=stream_duration_HH }
+    # State variable id 'stream_duration_HH' was normalized to 'stream_duration_hh'.
+    stream_duration_hh:
       label: Streaming Duration (Hours)
       type: string
     #TODO
@@ -386,7 +420,13 @@
     #
     # { evidence=call, inferred_type=string, variable_id=stream_duration_MM }
     # Type for state variable 'stream_duration_MM' was inferred as 'string'.
-    stream_duration_MM:
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { new=stream_duration_mm, old=stream_duration_MM }
+    # State variable id 'stream_duration_MM' was normalized to 'stream_duration_mm'.
+    stream_duration_mm:
       label: Streaming Duration (Minutes)
       type: string
     #TODO
@@ -395,7 +435,13 @@
     #
     # { evidence=call, inferred_type=string, variable_id=stream_duration_SS }
     # Type for state variable 'stream_duration_SS' was inferred as 'string'.
-    stream_duration_SS:
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { new=stream_duration_ss, old=stream_duration_SS }
+    # State variable id 'stream_duration_SS' was normalized to 'stream_duration_ss'.
+    stream_duration_ss:
       label: Streaming Duration (Seconds)
       type: string
     #TODO
@@ -431,7 +477,13 @@
     #
     # { evidence=fallback, inferred_type=string, variable_id=URL }
     # Type for state variable 'URL' was inferred as 'string'.
-    URL:
+    #TODO
+    #
+    # [Unknown]:[Unknown]
+    #
+    # { new=url, old=URL }
+    # State variable id 'URL' was normalized to 'url'.
+    url:
       label: Current URL
       type: string
   #TODO
@@ -479,7 +531,7 @@
       passphrase: $1
   - match: ^Current\ URL:\s*(.+)$
     set:
-      URL: $1
+      url: $1
   - match: ^Status:\s*(.+)$
     set:
       stream_state: $1
@@ -525,13 +577,13 @@
       quality: ''
       stream_state: ''
       stream_duration: ''
-      stream_duration_HH: ''
-      stream_duration_MM: ''
-      stream_duration_SS: ''
+      stream_duration_hh: ''
+      stream_duration_mm: ''
+      stream_duration_ss: ''
       stream_bitrate: ''
       cache: ''
       passphrase: ''
-      URL: ''
+      url: ''
     controls:
     - type: indicator
       key: model
@@ -564,13 +616,13 @@
       key: stream_duration
       label: Streaming Duration
     - type: indicator
-      key: stream_duration_HH
+      key: stream_duration_hh
       label: Streaming Duration (Hours)
     - type: indicator
-      key: stream_duration_MM
+      key: stream_duration_mm
       label: Streaming Duration (Minutes)
     - type: indicator
-      key: stream_duration_SS
+      key: stream_duration_ss
       label: Streaming Duration (Seconds)
     - type: indicator
       key: stream_bitrate
@@ -582,7 +634,7 @@
       key: passphrase
       label: Passphrase
     - type: indicator
-      key: URL
+      key: url
       label: Current URL
   
   '''
@@ -597,6 +649,12 @@
   author: C2O Fixture Bot
   transport: tcp
   description: Purpose-built C2O test module covering every extractor surface
+  verified: false
+  simulated: true
+  ports:
+  - 5000
+  tags:
+  - tcp
   source_url: https://github.com/Capp3/companion-2-openavc
   delimiter: "\n"
   help:
@@ -606,7 +664,7 @@
     port_open:
     - 5000
     manufacturer_alias:
-    - Generic
+    - generic
   default_config:
     host: 192.168.1.10
     port: 5000

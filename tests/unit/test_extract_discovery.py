@@ -53,7 +53,7 @@ def test_extract_discovery_emits_port_aliases_and_missing_flag() -> None:
 
     assert section == DiscoverySection(
         port_open=(9977,),
-        manufacturer_alias=("Blackmagic Design", "Blackmagic"),
+        manufacturer_alias=("blackmagic design", "blackmagic"),
     )
     flags = review.by_code(ReviewCode.MISSING_DISCOVERY_FINGERPRINT)
     assert len(flags) == 1
@@ -66,7 +66,7 @@ def test_extract_discovery_drops_disallowed_ports() -> None:
     section, review = extract_discovery(_manifest("Generic"), _config(8080), _compat())
 
     assert section.port_open == ()
-    assert section.manufacturer_alias == ("Generic",)
+    assert section.manufacturer_alias == ("generic",)
     assert review.has_code(ReviewCode.MISSING_DISCOVERY_FINGERPRINT)
 
 
@@ -87,7 +87,7 @@ def test_extract_discovery_omits_missing_or_invalid_port() -> None:
 def test_extract_discovery_does_not_add_variant_for_single_token_manufacturer() -> None:
     section, _review = extract_discovery(_manifest("Generic"), _config(5000), _compat("Generic"))
 
-    assert section.manufacturer_alias == ("Generic",)
+    assert section.manufacturer_alias == ("generic",)
 
 
 def test_extract_discovery_uses_compatible_model_manufacturer_aliases() -> None:
@@ -97,4 +97,21 @@ def test_extract_discovery_uses_compatible_model_manufacturer_aliases() -> None:
         _compat("Vendor X", "generic"),
     )
 
-    assert section.manufacturer_alias == ("Generic", "Vendor X", "Vendor")
+    assert section.manufacturer_alias == ("generic", "vendor x", "vendor")
+
+
+def test_extract_discovery_emits_curated_oui_hints_for_known_manufacturer() -> None:
+    section, review = extract_discovery(
+        _manifest("Panasonic"),
+        _config(80),
+        _compat("Panasonic"),
+    )
+
+    assert section.oui == ("00:80:45", "70:1d:7c", "00:60:b0")
+    flags = review.by_code(ReviewCode.DISCOVERY_OUI_FROM_REGISTRY)
+    assert len(flags) == 1
+    assert flags[0].field == "discovery.oui"
+    assert flags[0].details == {
+        "manufacturer_alias": "panasonic",
+        "oui": "00:80:45,70:1d:7c,00:60:b0",
+    }

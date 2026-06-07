@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from c2o.extract.responses import extract_responses
+from c2o.model.review import ReviewCode
 from c2o.parse.js import parse_module
 from c2o.suitability.gate import assess_module
 
@@ -67,6 +68,33 @@ def test_unknown_vendor_zero_responses(unknown_vendor: Path) -> None:
 
     assert section.responses == ()
     assert review.flags == ()
+
+
+def test_panasonic_store_data_responses_are_composed(panasonic_ptz: Path) -> None:
+    section, review = extract_responses(parse_module(panasonic_ptz))
+
+    by_match = {entry.match: entry for entry in section.responses}
+
+    assert by_match["^p([01])$"].set == {"power": "$1"}
+    assert by_match["^dA([01])$"].set == {"tally": "$1"}
+    assert by_match["^TLR:([01])$"].set == {"tally": "$1"}
+    assert "^rER$" not in by_match
+    assert "^qSV3(.+)$" in by_match
+    version_entry = by_match["^qSV3(.+)$"]
+    assert version_entry.mappings is not None
+    assert version_entry.mappings[0].state == "version"
+    assert review.has_code(ReviewCode.RESPONSE_UNRESOLVED)
+
+    # Response setters must target the same snake_case state ids that
+    # state_variables emits (e.g. OAF -> oaf, irisMode -> iris_mode).
+    state_keys: set[str] = set()
+    for entry in section.responses:
+        if entry.set is not None:
+            state_keys.update(entry.set)
+        if entry.mappings is not None:
+            state_keys.update(mapping.state for mapping in entry.mappings)
+    assert {"oaf", "iris_mode", "preset_mode"} <= state_keys
+    assert not any(key != key.lower() for key in state_keys)
 
 
 def test_declined_responses_fixture_still_blocked(fixtures_dir: Path) -> None:

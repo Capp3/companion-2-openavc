@@ -8,7 +8,12 @@ from typing import Any
 
 import pytest
 
-from c2o.extract.manifest import ManifestExtractionError, extract_manifest
+from c2o.extract.manifest import (
+    ManifestExtractionError,
+    enrich_manifest_metadata,
+    extract_manifest,
+)
+from c2o.model.driver import AuthSection, TransportSection
 from c2o.model.review import ReviewCode
 
 
@@ -199,6 +204,76 @@ def test_missing_repository_leaves_source_url_unresolved(tmp_path: Path) -> None
     section, _report = extract_manifest(root)
 
     assert section.source_url is None
+
+
+def test_enrich_manifest_metadata_adds_brand_transport_tags_and_protocol(
+    tmp_path: Path,
+) -> None:
+    root = _write_manifest(
+        tmp_path,
+        manufacturer="Panasonic",
+        keywords=["ptz", "camera"],
+    )
+    section, _report = extract_manifest(root)
+
+    enriched, review = enrich_manifest_metadata(
+        section,
+        TransportSection(transport="http"),
+        auth=None,
+    )
+
+    assert enriched.tags == ("camera", "http", "ptz", "panasonic")
+    assert enriched.protocols == ("panasonic_http",)
+    flags = review.by_code(ReviewCode.PROTOCOL_INFERRED)
+    assert len(flags) == 1
+    assert flags[0].field == "protocols"
+    assert flags[0].details == {
+        "manufacturer": "Panasonic",
+        "protocol": "panasonic_http",
+        "transport": "http",
+    }
+
+
+def test_enrich_manifest_metadata_uses_telnet_protocol_for_tcp_auth(
+    tmp_path: Path,
+) -> None:
+    root = _write_manifest(
+        tmp_path,
+        manufacturer="Vaddio",
+        keywords=["ptz", "broadcast"],
+    )
+    section, _report = extract_manifest(root)
+
+    enriched, review = enrich_manifest_metadata(
+        section,
+        TransportSection(transport="tcp", delimiter="\r\n"),
+        auth=AuthSection(
+            type="telnet_login",
+            username_prompt="login:",
+            password_prompt="password:",
+            success_pattern=">",
+            username_field="username",
+            password_field="password",
+        ),
+    )
+
+    assert enriched.tags == ("camera", "telnet", "ptz", "broadcast", "vaddio")
+    assert enriched.protocols == ("vaddio_telnet",)
+    assert review.has_code(ReviewCode.PROTOCOL_INFERRED)
+
+
+def test_enrich_manifest_metadata_omits_generic_protocol(tmp_path: Path) -> None:
+    root = _write_manifest(tmp_path, manufacturer="Generic", keywords=["utility"])
+    section, _report = extract_manifest(root)
+
+    enriched, review = enrich_manifest_metadata(
+        section,
+        TransportSection(transport="tcp"),
+        auth=None,
+    )
+
+    assert enriched.protocols == ()
+    assert not review.has_code(ReviewCode.PROTOCOL_INFERRED)
 
 
 def test_missing_manifest_raises_manifest_extraction_error(tmp_path: Path) -> None:

@@ -5,8 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
-from c2o.extract import extract_config_fields
-from c2o.model.driver import ConfigFieldsSection
+from c2o.extract import (
+    ensure_auth_config_fields,
+    ensure_telnet_default_port,
+    extract_config_fields,
+)
+from c2o.model.driver import AuthSection, ConfigFieldsSection, ConfigSchemaEntry
+from c2o.model.review import ReviewCode
 from c2o.parse.js import ParsedModule, parse_module, parse_source
 
 
@@ -241,6 +246,108 @@ def test_bmd_webpresenter_fixture_extracts_expected_config_fields(
         "min": 1,
         "max": 65535,
     }
+
+
+def test_panasonic_ptz_fixture_resolves_imported_config_fields(
+    panasonic_ptz: Path,
+) -> None:
+    section = extract_config_fields(parse_module(panasonic_ptz))
+
+    assert section.default_config == {
+        "host": "",
+        "port": 80,
+    }
+    assert set(section.config_schema) == {
+        "host",
+        "port",
+    }
+    assert section.config_schema["host"].required is True
+    assert section.config_schema["port"].min == 1
+    assert section.config_schema["port"].max == 65535
+
+
+def test_config_field_aliases_and_internal_fields_are_filtered(tmp_path: Path) -> None:
+    section = _extract_inline(
+        tmp_path,
+        "{ type: 'textinput', id: 'httpPort', label: 'HTTP Port', regex: Regex.Port, default: '80' },"
+        "{ type: 'number', id: 'pollingInterval', label: 'Polling Interval', default: 5 },"
+        "{ type: 'checkbox', id: 'autoTCP', label: 'Auto TCP', default: true },"
+        "{ type: 'checkbox', id: 'debug', label: 'Debug', default: false },"
+    )
+
+    assert section.default_config == {"port": 80, "poll_interval": 5}
+    assert set(section.config_schema) == {"port", "poll_interval"}
+
+
+def test_auth_config_fields_are_injected_when_auth_is_detected() -> None:
+    section = ConfigFieldsSection()
+    auth = AuthSection(
+        type="telnet_login",
+        username_prompt="login:",
+        password_prompt="password:",
+        success_pattern=">",
+        username_field="username",
+        password_field="password",
+        line_ending="\r\n",
+    )
+
+    enriched = ensure_auth_config_fields(section, auth)
+
+    assert enriched.default_config == {"username": "", "password": ""}
+    assert enriched.config_schema["username"].model_dump(exclude_none=True) == {
+        "type": "string",
+        "label": "Username",
+        "required": True,
+    }
+    assert enriched.config_schema["password"].model_dump(exclude_none=True) == {
+        "type": "string",
+        "label": "Password",
+        "required": True,
+        "secret": True,
+    }
+
+
+def test_telnet_default_port_is_synthesized_when_telnet_auth_detected() -> None:
+    section = ConfigFieldsSection()
+    auth = AuthSection(
+        type="telnet_login",
+        username_prompt="login:",
+        password_prompt="password:",
+        username_field="username",
+        password_field="password",
+    )
+
+    enriched, report = ensure_telnet_default_port(section, auth)
+
+    assert enriched.default_config == {"port": 23}
+    assert enriched.config_schema["port"].model_dump(exclude_none=True) == {
+        "type": "integer",
+        "label": "Telnet Port",
+        "default": 23,
+    }
+    assert report.has_code(ReviewCode.CONFIG_DEFAULT_PORT_INFERRED)
+
+
+def test_telnet_default_port_is_not_added_when_port_already_present() -> None:
+    section = ConfigFieldsSection(
+        default_config={"port": 5000},
+        config_schema={"port": ConfigSchemaEntry(type="integer", label="Port")},
+    )
+    auth = AuthSection(type="telnet_login")
+
+    enriched, report = ensure_telnet_default_port(section, auth)
+
+    assert enriched.default_config == {"port": 5000}
+    assert not report.has_code(ReviewCode.CONFIG_DEFAULT_PORT_INFERRED)
+
+
+def test_telnet_default_port_is_not_added_without_auth() -> None:
+    section = ConfigFieldsSection()
+
+    enriched, report = ensure_telnet_default_port(section, None)
+
+    assert enriched == section
+    assert len(report) == 0
 
 
 def test_module_without_get_config_fields_returns_empty_section(

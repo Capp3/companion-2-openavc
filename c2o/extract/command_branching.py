@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -9,7 +10,7 @@ from tree_sitter import Node
 
 from c2o.extract.param_schema import extract_static_choice_values
 from c2o.model.driver import ParamEntry
-from c2o.parse.js import node_text
+from c2o.parse.js import ParsedModule, node_text
 from c2o.parse.send_template import (
     callback_has_options_access,
     callback_reads_instance_state,
@@ -17,6 +18,9 @@ from c2o.parse.send_template import (
     resolve_send_in_block,
     snake_lower,
 )
+
+# Instance properties that are commonly used as speed/value params in drive commands.
+_SPEED_PROP_PATTERN = re.compile(r"(?i)(speed|rate|level|value|velocity|step|amount)$")
 
 
 @dataclass(frozen=True)
@@ -46,6 +50,7 @@ def split_or_single(
     callback_node: Node,
     source: str,
     base_params: dict[str, ParamEntry],
+    parsed: ParsedModule | None = None,
 ) -> SplitResult:
     """Split branch-driven actions or emit a single command candidate."""
     body = _callback_body(callback_node)
@@ -55,6 +60,19 @@ def split_or_single(
     known_param_ids = set(base_params)
 
     if _is_whole_action_state_dependent(body, source):
+        # P2-5: Try to convert to parametric form when the only dependency is a
+        # simple numeric instance variable used as a speed/value argument.
+        if parsed is not None:
+            parametric = _try_instance_state_parametric(
+                action_key=action_key,
+                label=label,
+                body=body,
+                source=source,
+                base_params=base_params,
+                parsed=parsed,
+            )
+            if parametric is not None:
+                return parametric
         return SplitResult((), state_dependent_reason="instance_state")
 
     if_chain = _try_if_chain_split(
@@ -93,6 +111,188 @@ def split_or_single(
             ),
         )
     )
+
+
+def _try_instance_state_parametric(
+    *,
+    action_key: str,
+    label: str,
+    body: Node,
+    source: str,
+    base_params: dict[str, ParamEntry],
+    parsed: ParsedModule,
+) -> SplitResult | None:
+    """Convert a drive command that reads a single this.X speed property to a param.
+
+    Detects the pattern: ``this.sendCommand('camera pan left ' + this.panSpeed)``
+    and converts it to ``send: 'camera pan left {panSpeed}'`` with
+    ``params: {panSpeed: {type: integer, default: <init_value>}}``.
+    """
+    instance_props = _collect_instance_prop_reads(body, source)
+    if len(instance_props) != 1:
+        return None
+    prop_name = instance_props[0]
+
+    if not _SPEED_PROP_PATTERN.search(prop_name):
+        return None
+
+    send = _resolve_send_replacing_this_props(body, source, {prop_name})
+    if send is None:
+        return None
+
+    default_val = _get_this_prop_initial_value(prop_name, parsed)
+    param = ParamEntry(
+        type="integer",
+        label=prop_name,
+        default=default_val,
+        min=None,
+        max=None,
+    )
+    merged_params = {**base_params, prop_name: param}
+
+    return SplitResult(
+        (
+            CommandCandidate(
+                command_key=action_key,
+                label=label,
+                send=send,
+                params=merged_params,
+            ),
+        )
+    )
+
+
+def _collect_instance_prop_reads(body: Node, source: str) -> list[str]:
+    """Return names of ``this.X`` property accesses found in a body (excluding known API props)."""
+    from c2o.parse.send_template import _ALLOWED_THIS_PROPS  # noqa: PLC0415
+
+    found: list[str] = []
+    for node in _walk_nodes(body):
+        if node.type != "member_expression":
+            continue
+        obj = node.child_by_field_name("object")
+        prop = node.child_by_field_name("property")
+        if obj is None or prop is None or obj.type != "this":
+            continue
+        prop_name = node_text(prop, source)
+        if prop_name in _ALLOWED_THIS_PROPS:
+            continue
+        if prop_name not in found:
+            found.append(prop_name)
+    return found
+
+
+def _resolve_send_replacing_this_props(
+    body: Node,
+    source: str,
+    prop_names: set[str],
+) -> str | None:
+    """Resolve the send expression, replacing ``this.X`` with ``{X}`` placeholders."""
+    from c2o.parse.send_template import _find_send_calls  # noqa: PLC0415
+
+    send_calls = _find_send_calls(body, source)
+    if not send_calls:
+        return None
+
+    arg = send_calls[-1].child_by_field_name("arguments")
+    if arg is None or not arg.named_children:
+        return None
+
+    return _resolve_with_this_prop_replacement(arg.named_children[0], source, prop_names, body)
+
+
+def _resolve_with_this_prop_replacement(
+    node: Node,
+    source: str,
+    prop_names: set[str],
+    scope: Node,
+) -> str | None:
+    """Recursively resolve a send expression, substituting this.X → {X}."""
+    import ast as _ast
+
+    if node.type == "string":
+        raw = node_text(node, source)
+        try:
+            value = _ast.literal_eval(raw)
+            return value if isinstance(value, str) else None
+        except (SyntaxError, ValueError):
+            return raw[1:-1] if len(raw) >= 2 else raw
+
+    if node.type == "member_expression":
+        obj = node.child_by_field_name("object")
+        prop = node.child_by_field_name("property")
+        if obj is not None and prop is not None and obj.type == "this":
+            prop_name = node_text(prop, source)
+            if prop_name in prop_names:
+                return "{" + prop_name + "}"
+        return None
+
+    if node.type in {"binary_expression", "parenthesized_expression"}:
+        if node.type == "parenthesized_expression":
+            inner = node.named_children[0] if node.named_children else None
+            if inner is None:
+                return None
+            return _resolve_with_this_prop_replacement(inner, source, prop_names, scope)
+        operator = node.child_by_field_name("operator")
+        if operator is None or node_text(operator, source) != "+":
+            return None
+        left = node.child_by_field_name("left")
+        right = node.child_by_field_name("right")
+        if left is None or right is None:
+            return None
+        left_str = _resolve_with_this_prop_replacement(left, source, prop_names, scope)
+        right_str = _resolve_with_this_prop_replacement(right, source, prop_names, scope)
+        if left_str is None or right_str is None:
+            return None
+        return left_str + right_str
+
+    if node.type == "template_string":
+        parts: list[str] = []
+        for child in node.children:
+            if child.type == "string_fragment":
+                parts.append(node_text(child, source))
+            elif child.type == "template_substitution":
+                inner = child.named_children[0] if child.named_children else None
+                if inner is None:
+                    return None
+                sub = _resolve_with_this_prop_replacement(inner, source, prop_names, scope)
+                if sub is None:
+                    return None
+                parts.append(sub)
+        return "".join(parts)
+
+    return None
+
+
+def _get_this_prop_initial_value(prop_name: str, parsed: ParsedModule) -> int | None:
+    """Find the initial integer value of ``this.X = N`` in constructor/init methods."""
+    for rel_path, tree in parsed.trees.items():
+        source = parsed.sources[rel_path]
+        for node in _walk_nodes(tree.root_node):
+            if node.type != "assignment_expression":
+                continue
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            if left is None or right is None:
+                continue
+            if not _is_this_prop(left, source, prop_name):
+                continue
+            if right.type == "number":
+                try:
+                    return int(float(node_text(right, source)))
+                except ValueError:
+                    pass
+    return None
+
+
+def _is_this_prop(node: Node, source: str, prop_name: str) -> bool:
+    if node.type != "member_expression":
+        return False
+    obj = node.child_by_field_name("object")
+    prop = node.child_by_field_name("property")
+    if obj is None or prop is None:
+        return False
+    return obj.type == "this" and node_text(prop, source) == prop_name
 
 
 def _is_whole_action_state_dependent(body: Node, source: str) -> bool:

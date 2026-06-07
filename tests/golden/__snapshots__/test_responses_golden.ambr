@@ -60,7 +60,7 @@
         dict({
           'match': '^Current\\ URL:\\s*(.+)$',
           'set': dict({
-            'URL': '$1',
+            'url': '$1',
           }),
         }),
         dict({

@@ -333,6 +333,7 @@ def test_discovery_section_round_trip() -> None:
     assert section.model_dump(exclude_none=True) == {
         "port_open": (9977,),
         "manufacturer_alias": ("Blackmagic Design", "Blackmagic"),
+        "oui": (),
     }
 
 

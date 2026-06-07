@@ -56,7 +56,7 @@ extend-exclude = ["c2o/vendored"]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["c2o"]
+known-first-party = ["c2o", "tests"]
 
 [tool.isort]
 profile = "black"

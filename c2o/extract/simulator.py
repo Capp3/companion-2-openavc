@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import quote
 
 from c2o.model.driver import (
     CommandEntry,
@@ -184,12 +185,12 @@ def _handler_for_http_command(command: CommandEntry) -> SimulatorCommandHandler:
         raise SimulatorExtractionError(msg)
     respond = "{}" if method == "GET" else '{"ok": true}'
     return SimulatorCommandHandler(
-        match=f"{method} {_http_path_to_match(path)}.*",
+        match=f"{method} {_http_path_to_match(path, command.query_params)}.*",
         respond=respond,
     )
 
 
-def _http_path_to_match(path: str) -> str:
+def _http_path_to_match(path: str, query_params: dict[str, str] | None = None) -> str:
     parts: list[str] = []
     cursor = 0
     for match in _PLACEHOLDER_RE.finditer(path):
@@ -197,7 +198,46 @@ def _http_path_to_match(path: str) -> str:
         parts.append(r"([^?|]*)")
         cursor = match.end()
     parts.append(re.escape(path[cursor:]))
+    query = _query_match_regex(query_params)
+    if query is not None:
+        parts.append(r"\?")
+        parts.append(query)
     return "".join(parts)
+
+
+def _query_match_regex(query_params: dict[str, str] | None) -> str | None:
+    """Build a regex fragment for the query string of an HTTP simulator handler.
+
+    Static ``key=value`` pairs are emitted verbatim (escaped); pairs whose value
+    carries a ``{placeholder}`` keep their static prefix/suffix and substitute a
+    bounded wildcard (``[^&]*``) for the dynamic region. This keeps otherwise
+    similar commands (e.g. ``cmd=#I..`` vs ``cmd=#S..``) distinguishable instead
+    of collapsing to a single match.
+    """
+    if not query_params:
+        return None
+    parts: list[str] = []
+    for key, value in query_params.items():
+        if "{" in key or "}" in key:
+            continue
+        parts.append(f"{re.escape(quote(key, safe=''))}={_query_value_regex(value)}")
+    return "&".join(parts) if parts else None
+
+
+def _query_value_regex(value: str) -> str:
+    """Escape a query value to regex, replacing ``{placeholder}`` with ``[^&]*``."""
+    fragments: list[str] = []
+    cursor = 0
+    for match in _PLACEHOLDER_RE.finditer(value):
+        static = value[cursor : match.start()]
+        if static:
+            fragments.append(re.escape(quote(static, safe="")))
+        fragments.append(r"[^&]*")
+        cursor = match.end()
+    tail = value[cursor:]
+    if tail:
+        fragments.append(re.escape(quote(tail, safe="")))
+    return "".join(fragments)
 
 
 def _section_has_content(section: SimulatorSection) -> bool:

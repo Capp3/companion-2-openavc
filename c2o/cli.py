@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 import typer
 
@@ -28,6 +28,7 @@ from c2o.emit.siblings import (
     write_presets_yml,
 )
 from c2o.extract import (
+    AuthExtractionError,
     CommandsExtractionError,
     CompatibleModelsExtractionError,
     ConfigFieldsExtractionError,
@@ -42,6 +43,7 @@ from c2o.extract import (
     SimulatorExtractionError,
     StateVariablesExtractionError,
     TransportExtractionError,
+    extract_auth,
     extract_commands,
     extract_compatible_models,
     extract_config_fields,
@@ -56,9 +58,13 @@ from c2o.extract import (
     extract_simulator,
     extract_state_variables,
     extract_transport,
+    ensure_auth_config_fields,
+    ensure_telnet_default_port,
+    enrich_manifest_metadata,
 )
 from c2o.log import LogFormat, configure_logging, emit
 from c2o.model.driver import (
+    AuthSection,
     CommandsSection,
     CompatibleModelsSection,
     ConfigFieldsSection,
@@ -122,6 +128,7 @@ class ExtractedModuleSections:
     help_section: HelpSection
     simulator: SimulatorSection
     review: ReviewReport
+    auth: AuthSection | None = None
 
 
 @app.callback()
@@ -468,6 +475,7 @@ def _extract_or_exit[T](
     try:
         result = callback()
     except (
+        AuthExtractionError,
         CommandsExtractionError,
         CompatibleModelsExtractionError,
         ConfigFieldsExtractionError,
@@ -600,6 +608,13 @@ def _on_connect_log_summary(
 ) -> tuple[dict[str, object], int]:
     on_connect, review = result
     return {"commands": len(on_connect.commands)}, len(review)
+
+
+def _auth_log_summary(
+    result: tuple[AuthSection | None, ReviewReport],
+) -> tuple[dict[str, object], int]:
+    auth, review = result
+    return {"detected": auth is not None}, len(review)
 
 
 def _help_log_summary(result: tuple[HelpSection, ReviewReport]) -> tuple[dict[str, object], int]:
@@ -813,10 +828,12 @@ def _extract_module_sections(
     else:
         review = review or ReviewReport()
         registry_report = ReviewReport()
+    assert manifest is not None
+    manifest_section = cast("ManifestSection", manifest)
 
     compatible_models, cm_review = _extract_or_exit(
         "Compatible models",
-        lambda: extract_compatible_models(root, manifest),
+        lambda: extract_compatible_models(root, manifest_section),
         summary=_compatible_models_log_summary,
     )
     review = _merge_review(review, cm_review)
@@ -864,7 +881,7 @@ def _extract_module_sections(
     discovery, discovery_review = _extract_or_exit(
         "Discovery",
         lambda: extract_discovery(
-            manifest,
+            manifest_section,
             config_fields,
             compatible_models,
         ),
@@ -879,12 +896,28 @@ def _extract_module_sections(
     )
     review = _merge_review(review, on_connect_review)
 
+    auth_section, auth_review = _extract_or_exit(
+        "Auth",
+        lambda: extract_auth(parsed),
+        summary=_auth_log_summary,
+    )
+    review = _merge_review(review, auth_review)
+    config_fields = ensure_auth_config_fields(config_fields, auth_section)
+    config_fields, port_review = ensure_telnet_default_port(config_fields, auth_section)
+    review = _merge_review(review, port_review)
+    manifest_section, manifest_enrichment_review = enrich_manifest_metadata(
+        manifest_section,
+        transport,
+        auth=auth_section,
+    )
+    review = _merge_review(review, manifest_enrichment_review)
+
     help_section, help_review = _extract_or_exit(
         "Help",
         lambda: extract_help(
             root,
             parsed,
-            manifest_description=manifest.description,
+            manifest_description=manifest_section.description,
         ),
         summary=_help_log_summary,
     )
@@ -898,7 +931,7 @@ def _extract_module_sections(
     review = _merge_review(review, simulator_review)
 
     return ExtractedModuleSections(
-        manifest=manifest,
+        manifest=manifest_section,
         registry_report=registry_report,
         compatible_models=compatible_models,
         transport=transport,
@@ -912,6 +945,7 @@ def _extract_module_sections(
         help_section=help_section,
         simulator=simulator,
         review=review,
+        auth=auth_section,
     )
 
 

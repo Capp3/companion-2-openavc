@@ -43,6 +43,10 @@ def build_driver_payload(sections: Any) -> dict[str, Any]:
     manifest = sections.manifest
     transport = sections.transport
 
+    # Determine simulated flag from simulator content.
+    sim = sections.simulator
+    has_simulator = bool(sim.initial_state or sim.controls or sim.command_handlers)
+
     payload: dict[str, Any] = {
         "id": manifest.id,
         "name": manifest.name,
@@ -52,12 +56,31 @@ def build_driver_payload(sections: Any) -> dict[str, Any]:
         "author": manifest.author,
         "transport": transport.transport,
         "description": manifest.description,
+        "verified": False,
     }
+
+    if has_simulator:
+        payload["simulated"] = True
+
+    # Ports: use discovery port_open hints or config_fields port default.
+    ports = _collect_ports(sections)
+    if ports:
+        payload["ports"] = list(ports)
+
+    if manifest.tags:
+        payload["tags"] = list(manifest.tags)
+
+    if manifest.protocols:
+        payload["protocols"] = list(manifest.protocols)
 
     if manifest.source_url is not None:
         payload["source_url"] = manifest.source_url
     if transport.delimiter is not None:
         payload["delimiter"] = transport.delimiter
+
+    auth = getattr(sections, "auth", None)
+    if auth is not None:
+        payload["auth"] = _non_empty_items(auth.model_dump(mode="json", exclude_none=True))
 
     payload["help"] = sections.help_section.model_dump(mode="json")
 
@@ -163,6 +186,20 @@ def write_avcdriver_validated(path: Path, sections: Any) -> UpstreamValidationRe
 
 def _model_payload(model: Any) -> dict[str, Any]:
     return cast("dict[str, Any]", model.model_dump(mode="json", exclude_none=True))
+
+
+def _collect_ports(sections: Any) -> list[int]:
+    """Collect port numbers from discovery hints and config defaults."""
+    ports: list[int] = []
+    # Ports from config_fields default_config
+    raw_port = sections.config_fields.default_config.get("port")
+    if isinstance(raw_port, int) and 1 <= raw_port <= 65535:
+        ports.append(raw_port)
+    # Ports from discovery section
+    for p in getattr(sections.discovery, "port_open", ()):
+        if isinstance(p, int) and p not in ports:
+            ports.append(p)
+    return ports
 
 
 def _non_empty_items(payload: dict[str, Any]) -> dict[str, Any]:

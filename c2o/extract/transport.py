@@ -79,9 +79,48 @@ def _infer_delimiter(parsed: ParsedModule) -> str | None:
             if delimiter is not None:
                 candidates.add(delimiter)
 
+    # Also scan socket.send(…) call arguments: a string ending in \r\n on the
+    # send side is strong evidence that the protocol framing uses \r\n even if
+    # the receive-buffer parsing splits on the bare \n.
+    for method in ("send", "sendCommand"):
+        for match in find_calls(parsed, method, include_methods=True):
+            source = parsed.sources[match.rel_path]
+            delimiter = _delimiter_from_send_call(match.node, match.args_node, source)
+            if delimiter is not None:
+                candidates.add(delimiter)
+
     for delimiter in _DELIMITER_PRIORITY:
         if delimiter in candidates:
             return None if delimiter == "\r" else delimiter
+    return None
+
+
+def _delimiter_from_send_call(call: Node, args: Node | None, source: str) -> str | None:
+    """Check send/sendCommand arguments for a string literal ending in \\r\\n or \\n."""
+    if args is None or args.named_child_count == 0:
+        return None
+    first_arg = args.named_children[0]
+    raw = _extract_string_literal(first_arg, source)
+    if raw is None:
+        return None
+    value = _decode_js_string(raw)
+    for delimiter in _DELIMITER_PRIORITY:
+        if value.endswith(delimiter):
+            return delimiter
+    return None
+
+
+def _extract_string_literal(node: Node, source: str) -> str | None:
+    """Return the raw text of a string literal node, or None for non-strings."""
+    if node.type == "string":
+        return node_text(node, source)
+    if node.type == "template_string":
+        return None
+    if node.type in {"binary_expression", "parenthesized_expression"}:
+        for child in node.children:
+            result = _extract_string_literal(child, source)
+            if result is not None:
+                return result
     return None
 
 

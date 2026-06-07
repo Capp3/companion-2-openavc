@@ -77,28 +77,35 @@ def test_build_driver_payload_uses_locked_top_level_order() -> None:
         )
     )
 
-    assert list(payload) == [
-        "id",
-        "name",
-        "manufacturer",
-        "category",
-        "version",
-        "author",
-        "transport",
-        "description",
-        "source_url",
-        "delimiter",
-        "help",
-        "discovery",
-        "default_config",
-        "config_schema",
-        "state_variables",
-        "commands",
-        "responses",
-        "on_connect",
-        "polling",
-        "simulator",
-    ]
+    # Core order; verified is always present, simulated/ports appear when non-empty.
+    keys = list(payload)
+    assert keys[0] == "id"
+    assert keys[1] == "name"
+    assert keys[2] == "manufacturer"
+    assert keys[3] == "category"
+    assert keys[4] == "version"
+    assert keys[5] == "author"
+    assert keys[6] == "transport"
+    assert keys[7] == "description"
+    assert "verified" in keys
+    assert "source_url" in keys
+    assert "delimiter" in keys
+    assert "help" in keys
+    assert "discovery" in keys
+    assert "default_config" in keys
+    assert "config_schema" in keys
+    assert "state_variables" in keys
+    assert "commands" in keys
+    assert "responses" in keys
+    assert "on_connect" in keys
+    assert "polling" in keys
+    assert "simulator" in keys
+    # verified comes before help
+    assert keys.index("verified") < keys.index("help")
+    # source_url before help
+    assert keys.index("source_url") < keys.index("help")
+    # on_connect before polling before simulator
+    assert keys.index("on_connect") < keys.index("polling") < keys.index("simulator")
 
 
 def test_build_driver_payload_omits_empty_optional_sections() -> None:
@@ -115,6 +122,44 @@ def test_build_driver_payload_merges_poll_interval_into_default_config() -> None
 
     assert payload["default_config"] == {"host": "", "port": 1234, "poll_interval": 5}
     assert payload["polling"] == {"queries": ["STATUS?\n"]}
+
+
+def test_build_driver_payload_emits_ports_from_normalized_config_port() -> None:
+    payload = build_driver_payload(
+        _sections(
+            config_fields=ConfigFieldsSection(
+                default_config={"host": "", "port": 80},
+                config_schema={
+                    "host": ConfigSchemaEntry(type="string", label="Host", required=True),
+                    "port": ConfigSchemaEntry(type="integer", label="Port", min=1, max=65535),
+                },
+            ),
+            discovery=DiscoverySection(),
+        )
+    )
+
+    assert payload["ports"] == [80]
+
+
+def test_build_driver_payload_emits_protocols_after_tags() -> None:
+    payload = build_driver_payload(
+        _sections(
+            manifest=ManifestSection(
+                id="panasonic_ptz",
+                name="Panasonic PTZ",
+                manufacturer="Panasonic",
+                category="camera",
+                version="1.0.0",
+                author="C2O",
+                description="Fixture driver",
+                tags=("camera", "ptz", "panasonic"),
+                protocols=("panasonic_http",),
+            )
+        )
+    )
+
+    assert payload["protocols"] == ["panasonic_http"]
+    assert list(payload).index("tags") < list(payload).index("protocols")
 
 
 def test_serialize_driver_double_quotes_protocol_strings() -> None:

@@ -47,7 +47,7 @@ def test_convert_interactive_resolves_metadata_then_strict_fails_on_remaining_fl
     assert "  manufacturer: Blackmagic Design" in result.stdout
     assert "  author: Community" in result.stdout
     assert "  unresolved review flags: 0" in result.stdout
-    assert "Strict mode: conversion requires 7 review flag(s) to be resolved." in result.stderr
+    assert "Strict mode: conversion requires 8 review flag(s) to be resolved." in result.stderr
     assert not out_avc.exists()
     assert not (tmp_path / "out.review.json").exists()
 

@@ -20,6 +20,12 @@ def test_review_code_catalogue() -> None:
         "compatible_models_confidence",
         "simulator_auto",
         "author_default",
+        "response_unresolved",
+        "variable_id_normalized",
+        "discovery_oui_from_registry",
+        "protocol_inferred",
+        "config_default_port_inferred",
+        "command_id_normalized",
     ]
 
 

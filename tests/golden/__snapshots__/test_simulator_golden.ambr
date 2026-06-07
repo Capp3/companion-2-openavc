@@ -63,17 +63,17 @@
           'type': 'indicator',
         }),
         dict({
-          'key': 'stream_duration_HH',
+          'key': 'stream_duration_hh',
           'label': 'Streaming Duration (Hours)',
           'type': 'indicator',
         }),
         dict({
-          'key': 'stream_duration_MM',
+          'key': 'stream_duration_mm',
           'label': 'Streaming Duration (Minutes)',
           'type': 'indicator',
         }),
         dict({
-          'key': 'stream_duration_SS',
+          'key': 'stream_duration_ss',
           'label': 'Streaming Duration (Seconds)',
           'type': 'indicator',
         }),
@@ -93,13 +93,12 @@
           'type': 'indicator',
         }),
         dict({
-          'key': 'URL',
+          'key': 'url',
           'label': 'Current URL',
           'type': 'indicator',
         }),
       ),
       'initial_state': dict({
-        'URL': '',
         'cache': '',
         'key': '',
         'label': '',
@@ -111,10 +110,11 @@
         'software': '',
         'stream_bitrate': '',
         'stream_duration': '',
-        'stream_duration_HH': '',
-        'stream_duration_MM': '',
-        'stream_duration_SS': '',
+        'stream_duration_hh': '',
+        'stream_duration_mm': '',
+        'stream_duration_ss': '',
         'stream_state': '',
+        'url': '',
         'video_mode': '',
       }),
     }),
@@ -201,7 +201,7 @@
     'simulator': dict({
       'command_handlers': tuple(
         dict({
-          'match': 'GET /api/status.*',
+          'match': 'GET /api/status\\?include=[^&]*.*',
           'respond': '{}',
         }),
         dict({

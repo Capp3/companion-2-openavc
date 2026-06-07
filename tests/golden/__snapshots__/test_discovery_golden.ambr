@@ -3,8 +3,10 @@
   dict({
     'discovery': dict({
       'manufacturer_alias': tuple(
-        'Blackmagic Design',
-        'Blackmagic',
+        'blackmagic design',
+        'blackmagic',
+      ),
+      'oui': tuple(
       ),
       'port_open': tuple(
         9977,
@@ -26,7 +28,9 @@
   dict({
     'discovery': dict({
       'manufacturer_alias': tuple(
-        'Generic',
+        'generic',
+      ),
+      'oui': tuple(
       ),
       'port_open': tuple(
         5000,
@@ -48,8 +52,10 @@
   dict({
     'discovery': dict({
       'manufacturer_alias': tuple(
-        'Vendor X',
-        'Vendor',
+        'vendor x',
+        'vendor',
+      ),
+      'oui': tuple(
       ),
       'port_open': tuple(
         6000,

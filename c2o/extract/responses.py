@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 from tree_sitter import Node
 
 from c2o.extract.response_patterns import (
+    anchor_pattern,
     build_boolean_map_entry,
     build_entry,
     build_fan_out_entry,
@@ -15,9 +18,11 @@ from c2o.extract.response_patterns import (
     match_group_index,
     regex_pattern_from_node,
     string_literal_value,
+    triple_to_response_entry,
 )
-from c2o.model.driver import ResponseEntry, ResponsesSection
-from c2o.model.review import ReviewReport
+from c2o.extract.identifiers import normalize_identifier
+from c2o.model.driver import ResponseEntry, ResponseMappingEntry, ResponsesSection
+from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
 from c2o.parse.event_handlers import (
     EventHandler,
     delegated_line_methods,
@@ -25,6 +30,11 @@ from c2o.parse.event_handlers import (
 )
 from c2o.parse.js import ParsedModule, find_all_method_definitions, node_text
 from c2o.parse.literals import pair_key
+from c2o.parse.store_data import (
+    TransformedValue,
+    decode_store_data,
+    find_check_variables_sink_map,
+)
 
 
 class ResponsesExtractionError(ValueError):
@@ -35,11 +45,107 @@ def extract_responses(parsed: ParsedModule) -> tuple[ResponsesSection, ReviewRep
     """Build responses from static receive-handler patterns."""
     handlers = find_socket_event_handlers(parsed)
     entries: list[ResponseEntry] = []
+    flags: list[ReviewFlag] = []
     entries.extend(_extract_inline_handlers(handlers))
     entries.extend(_extract_delegated_helpers(parsed, handlers))
     entries.extend(_extract_aggregating_fanout(parsed))
-    merged = _merge_entries(entries)
-    return ResponsesSection(responses=tuple(merged)), ReviewReport()
+    store_data_entries, store_data_flags = _extract_store_data_responses(parsed)
+    entries.extend(store_data_entries)
+    flags.extend(store_data_flags)
+    normalized = _normalize_state_keys(entries)
+    merged = _merge_entries(_merge_constant_suffix_pairs(normalized))
+    return ResponsesSection(responses=tuple(merged)), ReviewReport(flags=tuple(flags))
+
+
+def _normalize_state_keys(entries: list[ResponseEntry]) -> list[ResponseEntry]:
+    """Normalize response target state ids to match emitted state_variables ids.
+
+    Companion receive handlers reference state via the raw variable id (e.g.
+    ``OAF``/``irisMode``). ``state_variables`` emits snake_case ids, so response
+    setters and mappings must be normalized the same way to stay consistent.
+    Capture/value strings (e.g. ``$1``) are left untouched.
+    """
+    normalized: list[ResponseEntry] = []
+    for entry in entries:
+        if entry.set is not None:
+            new_set = {normalize_identifier(key): value for key, value in entry.set.items()}
+            if new_set != entry.set:
+                entry = entry.model_copy(update={"set": new_set})
+        elif entry.mappings is not None:
+            new_mappings = tuple(
+                mapping.model_copy(update={"state": normalize_identifier(mapping.state)})
+                if normalize_identifier(mapping.state) != mapping.state
+                else mapping
+                for mapping in entry.mappings
+            )
+            if new_mappings != entry.mappings:
+                entry = entry.model_copy(update={"mappings": new_mappings})
+        normalized.append(entry)
+    return normalized
+
+
+def _extract_store_data_responses(
+    parsed: ParsedModule,
+) -> tuple[list[ResponseEntry], list[ReviewFlag]]:
+    sink_map = find_check_variables_sink_map(parsed)
+    if not sink_map:
+        return [], []
+
+    entries: list[ResponseEntry] = []
+    flags: list[ReviewFlag] = []
+    flagged: set[tuple[str, str]] = set()
+    for triple in decode_store_data(parsed):
+        sink = sink_map.get(triple.field)
+        if sink is None:
+            if triple.field in sink_map:
+                _append_response_unresolved_flag(
+                    flags,
+                    flagged,
+                    field=triple.field,
+                    token=triple.token,
+                    reason="checkVariables sink is computed",
+                )
+            continue
+
+        if isinstance(triple.value, TransformedValue):
+            _append_response_unresolved_flag(
+                flags,
+                flagged,
+                field=sink,
+                token=triple.token,
+                reason=f"storeData value is transformed: {triple.value.description}",
+            )
+            continue
+
+        entry = triple_to_response_entry(triple, sink)
+        if entry is not None:
+            entries.append(entry)
+    return entries, flags
+
+
+def _append_response_unresolved_flag(
+    flags: list[ReviewFlag],
+    flagged: set[tuple[str, str]],
+    *,
+    field: str,
+    token: str,
+    reason: str,
+) -> None:
+    key = (field, token)
+    if key in flagged:
+        return
+    flagged.add(key)
+    flags.append(
+        ReviewFlag(
+            code=ReviewCode.RESPONSE_UNRESOLVED,
+            field=f"responses.{field}",
+            message=(
+                f"Response token '{token}' for field '{field}' could not be "
+                "expressed as a static OpenAVC response."
+            ),
+            details={"token": token, "field": field, "reason": reason},
+        )
+    )
 
 
 def _extract_inline_handlers(handlers: list[EventHandler]) -> list[ResponseEntry]:
@@ -130,7 +236,109 @@ def _extract_prefix_patterns(body: Node, source: str) -> list[ResponseEntry]:
                     continue
                 if entry is not None:
                     entries.append(entry)
+
+        # Also handle the pre-SDKv3 pattern: this.state.X = data.replace(prefix, '').trim()
+        # The module never calls setVariableValues; it mutates this.state and calls checkFeedbacks.
+        for entry in _extract_state_assign_patterns(consequent, source, prefix):
+            entries.append(entry)
+
     return entries
+
+
+def _extract_state_assign_patterns(
+    block: Node,
+    source: str,
+    prefix: str,
+) -> list[ResponseEntry]:
+    """Emit response entries from `this.state.X = data.replace(prefix, '').trim()` patterns."""
+    entries: list[ResponseEntry] = []
+    for node in _iter_nodes(block):
+        if node.type not in {"expression_statement", "assignment_expression"}:
+            continue
+        assign = (
+            node
+            if node.type == "assignment_expression"
+            else (node.named_children[0] if node.named_children else None)
+        )
+        if assign is None or assign.type != "assignment_expression":
+            continue
+        left = assign.child_by_field_name("left")
+        right = assign.child_by_field_name("right")
+        if left is None or right is None:
+            continue
+        state_var = _this_state_prop(left, source)
+        if state_var is None:
+            continue
+        entry = _state_rhs_to_entry(right, source, prefix, state_var)
+        if entry is not None:
+            entries.append(entry)
+    return entries
+
+
+def _this_state_prop(node: Node, source: str) -> str | None:
+    """Return the property name from `this.state.X`, or None."""
+    if node.type != "member_expression":
+        return None
+    obj = node.child_by_field_name("object")
+    prop = node.child_by_field_name("property")
+    if obj is None or prop is None:
+        return None
+    if obj.type != "member_expression":
+        return None
+    inner_obj = obj.child_by_field_name("object")
+    inner_prop = obj.child_by_field_name("property")
+    if inner_obj is None or inner_prop is None:
+        return None
+    if inner_obj.type != "this":
+        return None
+    if node_text(inner_prop, source) != "state":
+        return None
+    return node_text(prop, source)
+
+
+def _state_rhs_to_entry(
+    rhs: Node,
+    source: str,
+    prefix: str,
+    state_var: str,
+) -> ResponseEntry | None:
+    """Build a ResponseEntry from the RHS of a this.state assignment."""
+    rhs_text = node_text(rhs, source)
+
+    is_integer = (
+        rhs.type == "call_expression" and _call_function_name(rhs, source) == "parseInt"
+    ) or "parseInt" in rhs_text
+
+    if "replace" in rhs_text and "trim" in rhs_text:
+        if is_integer:
+            match = anchor_pattern(f"{re.escape(prefix)}\\s+(\\d+)")
+            if not compile_check(match):
+                return None
+            return ResponseEntry(
+                match=match,
+                mappings=(ResponseMappingEntry(group=1, state=state_var, type="integer"),),
+            )
+        return build_prefix_capture_entry(prefix, state_var)
+
+    if rhs_text.strip() in {"data", "line", "chunk", "msg", "message"}:
+        return build_prefix_capture_entry(prefix, state_var)
+
+    return None
+
+
+def _call_function_name(node: Node, source: str) -> str | None:
+    """Return the bare function/method name of a call expression, or None."""
+    if node.type != "call_expression":
+        return None
+    function = node.child_by_field_name("function")
+    if function is None:
+        return None
+    if function.type == "identifier":
+        return node_text(function, source)
+    if function.type == "member_expression":
+        prop = function.child_by_field_name("property")
+        return node_text(prop, source) if prop is not None else None
+    return None
 
 
 def _extract_set_values_from_block(
@@ -448,6 +656,64 @@ def _merge_entries(entries: list[ResponseEntry]) -> list[ResponseEntry]:
             seen.add((entry.match, state_var))
         merged.append(entry)
     return merged
+
+
+def _merge_constant_suffix_pairs(entries: list[ResponseEntry]) -> list[ResponseEntry]:
+    """Merge sibling literal 0/1 response tokens for the same state variable.
+
+    Panasonic-style ``storeData`` often assigns display strings from paired wire
+    tokens, e.g. ``p0 -> OFF`` and ``p1 -> ON``. OpenAVC can express the wire
+    state more usefully as one capture: ``^p([01])$ -> $1``. Keep this narrow:
+    only single-state ``set`` entries with trailing literal 0/1 tokens merge.
+    """
+    groups: dict[tuple[str, str], set[str]] = {}
+    for entry in entries:
+        parsed = _constant_suffix_pair_key(entry)
+        if parsed is None:
+            continue
+        prefix, digit, state_var = parsed
+        groups.setdefault((prefix, state_var), set()).add(digit)
+
+    mergeable = {
+        key
+        for key, digits in groups.items()
+        if digits == {"0", "1"} and compile_check(f"^{key[0]}([01])$")
+    }
+    if not mergeable:
+        return entries
+
+    result: list[ResponseEntry] = []
+    emitted: set[tuple[str, str]] = set()
+    for entry in entries:
+        parsed = _constant_suffix_pair_key(entry)
+        if parsed is None:
+            result.append(entry)
+            continue
+        prefix, _digit, state_var = parsed
+        key = (prefix, state_var)
+        if key not in mergeable:
+            result.append(entry)
+            continue
+        if key in emitted:
+            continue
+        emitted.add(key)
+        result.append(ResponseEntry(match=f"^{prefix}([01])$", set={state_var: "$1"}))
+    return result
+
+
+def _constant_suffix_pair_key(entry: ResponseEntry) -> tuple[str, str, str] | None:
+    if entry.set is None or len(entry.set) != 1:
+        return None
+    state_var, value = next(iter(entry.set.items()))
+    if value.startswith("$"):
+        return None
+    match = re.fullmatch(r"^\^(.+)([01])\$$", entry.match)
+    if match is None:
+        return None
+    prefix, digit = match.groups()
+    if re.search(r"[()[\]{}+*?|]", prefix):
+        return None
+    return prefix, digit, state_var
 
 
 def _entry_state_vars(entry: ResponseEntry) -> set[str]:

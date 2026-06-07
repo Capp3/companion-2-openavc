@@ -41,7 +41,7 @@
     "STREAM STATE:\n\n"
   Discovery:
     port_open: [9977]
-    manufacturer_alias: ["Blackmagic Design", "Blackmagic"]
+    manufacturer_alias: ["blackmagic design", "blackmagic"]
   On-connect: 0 commands
   Compatible models: 1 entry
     Blackmagic Design: ["WebPresenter HD", "WebPresenter 4K"] (untested)
@@ -52,7 +52,7 @@
     initial_state: 17 entries
     controls: 17
     command_handlers: 0
-  Review flags: 22
+  Review flags: 27
     [id_coerced] id - Driver id was coerced from 'bmd-webpresenter' to 'bmd_webpresenter'.
     [compatible_models_confidence] compatible_models - Compatible model entries are derived from Companion manifest products and default to untested confidence.
     [inferred_state_type] state_variables.model - Type for state variable 'model' was inferred as 'string'.

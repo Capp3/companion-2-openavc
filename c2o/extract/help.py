@@ -66,15 +66,21 @@ def _first_static_text_value(parsed: ParsedModule) -> str | None:
     if not matches or matches[0].body is None:
         return None
 
-    array = _find_return_array(matches[0].body)
-    if array is None:
+    source = parsed.sources[matches[0].rel_path]
+    resolved = _find_return_array(
+        matches[0].body,
+        source=source,
+        rel_path=matches[0].rel_path,
+        parsed=parsed,
+    )
+    if resolved is None:
         return None
 
-    source = parsed.sources[matches[0].rel_path]
+    array, array_source = resolved
     for child in array.named_children:
         if child.type != "object":
             continue
-        raw_field = decode_object(child, source)
+        raw_field = decode_object(child, array_source)
         if raw_field is UNRESOLVED:
             continue
         field = cast(dict[str, Any], raw_field)

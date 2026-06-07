@@ -8,9 +8,15 @@ from tree_sitter import Node
 
 from c2o.extract.command_branching import SplitResult, split_or_single
 from c2o.extract.http_commands import HttpCommandCandidate, extract_http_command
+from c2o.extract.identifiers import normalize_identifier
 from c2o.extract.param_schema import build_params_from_options
 from c2o.model.driver import CommandEntry, CommandsSection
 from c2o.model.review import ReviewCode, ReviewFlag, ReviewReport
+from c2o.parse.cross_file import (
+    DefinitionObject,
+    call_body_contains_send_helper,
+    resolve_factory_call_definitions,
+)
 from c2o.parse.js import (
     ParsedModule,
     collect_inline_object_pairs,
@@ -59,6 +65,22 @@ def extract_commands(parsed: ParsedModule) -> tuple[CommandsSection, ReviewRepor
                     commands=commands,
                 )
                 continue
+            if call_body_contains_send_helper(body, source):
+                flags.append(
+                    ReviewFlag(
+                        code=ReviewCode.STATE_DEPENDENT_BRANCH,
+                        field=f"commands.{action_key}",
+                        message=(
+                            f"Action '{action_key}' calls an HTTP send helper with "
+                            "a payload that cannot be reconstructed statically."
+                        ),
+                        details={
+                            "action_key": action_key,
+                            "reason": "http_send_helper_dynamic",
+                        },
+                    )
+                )
+                continue
 
         result = split_or_single(
             action_key=action_key,
@@ -67,6 +89,7 @@ def extract_commands(parsed: ParsedModule) -> tuple[CommandsSection, ReviewRepor
             callback_node=callback_node,
             source=source,
             base_params=base_params,
+            parsed=parsed,
         )
         _merge_split_result(
             result,
@@ -76,7 +99,46 @@ def extract_commands(parsed: ParsedModule) -> tuple[CommandsSection, ReviewRepor
             flags=flags,
         )
 
+    commands, normalize_flags = _normalize_command_ids(commands)
+    flags.extend(normalize_flags)
+
     return CommandsSection(commands=commands), ReviewReport(flags=tuple(flags))
+
+
+def _normalize_command_ids(
+    commands: dict[str, CommandEntry],
+) -> tuple[dict[str, CommandEntry], list[ReviewFlag]]:
+    """Normalize Companion action ids to snake_case OpenAVC command ids.
+
+    Companion modules name actions in mixed conventions (e.g. ``zoomS``,
+    ``recallPset``). OpenAVC command ids are snake_case, so they are normalized
+    here. Each rename is review-flagged, and collisions get a numeric suffix so
+    every command keeps a unique id.
+    """
+    normalized: dict[str, CommandEntry] = {}
+    flags: list[ReviewFlag] = []
+    for original, entry in commands.items():
+        new_id = _unique_command_id(normalize_identifier(original), normalized)
+        normalized[new_id] = entry
+        if new_id != original:
+            flags.append(
+                ReviewFlag(
+                    code=ReviewCode.COMMAND_ID_NORMALIZED,
+                    field=f"commands.{new_id}",
+                    message=f"Command id '{original}' was normalized to '{new_id}'.",
+                    details={"old": original, "new": new_id},
+                )
+            )
+    return normalized, flags
+
+
+def _unique_command_id(candidate: str, taken: dict[str, CommandEntry]) -> str:
+    if candidate not in taken:
+        return candidate
+    suffix = 2
+    while f"{candidate}_{suffix}" in taken:
+        suffix += 1
+    return f"{candidate}_{suffix}"
 
 
 def _merge_http_candidate(
@@ -147,9 +209,12 @@ def _collect_action_definitions(
         return []
 
     arg = arg_nodes[0]
-    object_pairs: list[tuple[str, Node]] = []
+    definitions_nodes: list[DefinitionObject] = []
     if arg.type == "object":
-        object_pairs = collect_inline_object_pairs(arg, source)
+        definitions_nodes = [
+            DefinitionObject(key=key, node=node, source=source)
+            for key, node in collect_inline_object_pairs(arg, source)
+        ]
     elif arg.type == "identifier":
         resolved = resolve_object_via_assignments(
             source=source,
@@ -157,15 +222,21 @@ def _collect_action_definitions(
             call_node=match.node,
         )
         if resolved is not None:
-            object_pairs = resolved
+            definitions_nodes = [
+                DefinitionObject(key=key, node=node, source=source) for key, node in resolved
+            ]
+    elif arg.type == "call_expression":
+        resolved_factory = resolve_factory_call_definitions(arg, parsed, source=source)
+        if resolved_factory is not None:
+            definitions_nodes = resolved_factory
 
     definitions: list[tuple[str, dict[str, Any], Node, str]] = []
-    for action_key, object_node in object_pairs:
-        callback_node = _find_callback_node(object_node, source)
+    for definition in definitions_nodes:
+        callback_node = _find_callback_node(definition.node, definition.source)
         if callback_node is None:
             continue
-        action_field = _decode_action_metadata(object_node, source)
-        definitions.append((action_key, action_field, callback_node, source))
+        action_field = _decode_action_metadata(definition.node, definition.source)
+        definitions.append((definition.key, action_field, callback_node, definition.source))
     return definitions
 
 

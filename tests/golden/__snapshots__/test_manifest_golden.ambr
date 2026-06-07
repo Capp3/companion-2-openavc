@@ -8,7 +8,16 @@
       'id': 'bmd_webpresenter',
       'manufacturer': 'Blackmagic Design',
       'name': 'WebPresenter',
+      'ports': tuple(
+      ),
+      'protocols': tuple(
+      ),
+      'simulated': False,
       'source_url': 'https://github.com/bitfocus/companion-module-bmd-webpresenter',
+      'tags': tuple(
+        'streaming',
+      ),
+      'verified': False,
       'version': '2.1.3',
     }),
     'review_flags': tuple(
@@ -33,7 +42,16 @@
       'id': 'dummy_device',
       'manufacturer': 'Generic',
       'name': 'Dummy Device',
+      'ports': tuple(
+      ),
+      'protocols': tuple(
+      ),
+      'simulated': False,
       'source_url': 'https://github.com/Capp3/companion-2-openavc',
+      'tags': tuple(
+        'tcp',
+      ),
+      'verified': False,
       'version': '1.0.0',
     }),
     'review_flags': tuple(

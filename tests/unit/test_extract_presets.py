@@ -59,3 +59,16 @@ def test_bmd_presets_extract_assignment_built_objects(bmd_webpresenter: Path) ->
     assert reboot.steps[0].down[0].action_id == "device"
     assert reboot.steps[0].down[0].options == {"device_control": "Reboot"}
     assert reboot.feedbacks == ()
+
+
+def test_panasonic_presets_extract_factory_definitions(panasonic_ptz: Path) -> None:
+    section, review = extract_presets(parse_module(panasonic_ptz))
+
+    assert len(review) == 0
+    assert len(section.presets) >= 60
+    assert [preset.id for preset in section.presets[:3]] == [
+        "pan-tilt-up",
+        "pan-tilt-down",
+        "pan-tilt-left",
+    ]
+    assert section.presets[0].steps[0].down[0].action_id == "up"

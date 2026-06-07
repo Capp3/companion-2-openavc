@@ -154,6 +154,12 @@ def test_extract_simulator_generates_http_handlers_with_tail_consumer() -> None:
                     path="/api/status",
                     query_params={"include": "{include}"},
                 ),
+                "power_on": CommandEntry(
+                    label="Power On",
+                    method="GET",
+                    path="/cgi-bin/aw_ptz",
+                    query_params={"cmd": "#O1", "res": "1"},
+                ),
                 "post_event": CommandEntry(
                     label="Post Event",
                     method="POST",
@@ -167,8 +173,39 @@ def test_extract_simulator_generates_http_handlers_with_tail_consumer() -> None:
 
     handlers = [handler.model_dump(exclude_none=True) for handler in section.command_handlers or ()]
     assert handlers == [
-        {"match": r"GET /api/status.*", "respond": "{}"},
+        {"match": r"GET /api/status\?include=[^&]*.*", "respond": "{}"},
+        {"match": r"GET /cgi\-bin/aw_ptz\?cmd=%23O1&res=1.*", "respond": "{}"},
         {"match": r"POST /api/device/([^?|]*)/event.*", "respond": '{"ok": true}'},
+    ]
+
+
+def test_extract_simulator_keeps_placeholder_query_commands_distinct() -> None:
+    section, _review = extract_simulator(
+        StateVariablesSection(),
+        CommandsSection(
+            commands={
+                "iris": CommandEntry(
+                    label="Iris",
+                    method="GET",
+                    path="/cgi-bin/aw_ptz",
+                    query_params={"cmd": "#I{val}", "res": "1"},
+                ),
+                "scene": CommandEntry(
+                    label="Scene",
+                    method="GET",
+                    path="/cgi-bin/aw_ptz",
+                    query_params={"cmd": "#S{val}", "res": "1"},
+                ),
+            }
+        ),
+    )
+
+    matches = sorted(
+        handler.match for handler in section.command_handlers or () if handler.match is not None
+    )
+    assert matches == [
+        r"GET /cgi\-bin/aw_ptz\?cmd=%23I[^&]*&res=1.*",
+        r"GET /cgi\-bin/aw_ptz\?cmd=%23S[^&]*&res=1.*",
     ]
 
 

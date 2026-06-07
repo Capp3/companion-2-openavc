@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from tree_sitter import Node
 
 from c2o.model.driver import HttpMethod, ParamEntry
+from c2o.parse.cross_file import resolve_send_helper_call
 from c2o.parse.http_request import resolve_http_request_in_block
 
 
@@ -37,9 +38,20 @@ def extract_http_command(
     if body is None:
         return None
 
-    request = resolve_http_request_in_block(body, source, set(base_params))
+    known_param_ids = set(base_params)
+    request = resolve_http_request_in_block(body, source, known_param_ids)
     if request is None:
-        return None
+        helper = resolve_send_helper_call(body, source, known_param_ids)
+        if helper is None:
+            return None
+        return HttpCommandCandidate(
+            command_key=action_key,
+            label=label,
+            method="GET",
+            path=helper.path,
+            query_params=helper.query_params,
+            params=dict(base_params),
+        )
 
     return HttpCommandCandidate(
         command_key=action_key,

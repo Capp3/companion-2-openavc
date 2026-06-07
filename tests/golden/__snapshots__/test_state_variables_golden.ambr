@@ -109,8 +109,17 @@
           'inferred_type': 'string',
           'variable_id': 'stream_duration_HH',
         }),
-        'field': 'state_variables.stream_duration_HH',
+        'field': 'state_variables.stream_duration_hh',
         'message': "Type for state variable 'stream_duration_HH' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.VARIABLE_ID_NORMALIZED: 'variable_id_normalized'>,
+        'details': dict({
+          'new': 'stream_duration_hh',
+          'old': 'stream_duration_HH',
+        }),
+        'field': 'state_variables.stream_duration_hh',
+        'message': "State variable id 'stream_duration_HH' was normalized to 'stream_duration_hh'.",
       }),
       dict({
         'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
@@ -119,8 +128,17 @@
           'inferred_type': 'string',
           'variable_id': 'stream_duration_MM',
         }),
-        'field': 'state_variables.stream_duration_MM',
+        'field': 'state_variables.stream_duration_mm',
         'message': "Type for state variable 'stream_duration_MM' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.VARIABLE_ID_NORMALIZED: 'variable_id_normalized'>,
+        'details': dict({
+          'new': 'stream_duration_mm',
+          'old': 'stream_duration_MM',
+        }),
+        'field': 'state_variables.stream_duration_mm',
+        'message': "State variable id 'stream_duration_MM' was normalized to 'stream_duration_mm'.",
       }),
       dict({
         'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
@@ -129,8 +147,17 @@
           'inferred_type': 'string',
           'variable_id': 'stream_duration_SS',
         }),
-        'field': 'state_variables.stream_duration_SS',
+        'field': 'state_variables.stream_duration_ss',
         'message': "Type for state variable 'stream_duration_SS' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.VARIABLE_ID_NORMALIZED: 'variable_id_normalized'>,
+        'details': dict({
+          'new': 'stream_duration_ss',
+          'old': 'stream_duration_SS',
+        }),
+        'field': 'state_variables.stream_duration_ss',
+        'message': "State variable id 'stream_duration_SS' was normalized to 'stream_duration_ss'.",
       }),
       dict({
         'code': <ReviewCode.INFERRED_STATE_TYPE: 'inferred_state_type'>,
@@ -169,16 +196,21 @@
           'inferred_type': 'string',
           'variable_id': 'URL',
         }),
-        'field': 'state_variables.URL',
+        'field': 'state_variables.url',
         'message': "Type for state variable 'URL' was inferred as 'string'.",
+      }),
+      dict({
+        'code': <ReviewCode.VARIABLE_ID_NORMALIZED: 'variable_id_normalized'>,
+        'details': dict({
+          'new': 'url',
+          'old': 'URL',
+        }),
+        'field': 'state_variables.url',
+        'message': "State variable id 'URL' was normalized to 'url'.",
       }),
     ]),
     'state_variables': dict({
       'state_variables': dict({
-        'URL': dict({
-          'label': 'Current URL',
-          'type': 'string',
-        }),
         'cache': dict({
           'label': 'Cache Used',
           'type': 'string',
@@ -223,20 +255,24 @@
           'label': 'Streaming Duration',
           'type': 'string',
         }),
-        'stream_duration_HH': dict({
+        'stream_duration_hh': dict({
           'label': 'Streaming Duration (Hours)',
           'type': 'string',
         }),
-        'stream_duration_MM': dict({
+        'stream_duration_mm': dict({
           'label': 'Streaming Duration (Minutes)',
           'type': 'string',
         }),
-        'stream_duration_SS': dict({
+        'stream_duration_ss': dict({
           'label': 'Streaming Duration (Seconds)',
           'type': 'string',
         }),
         'stream_state': dict({
           'label': 'Streaming State',
+          'type': 'string',
+        }),
+        'url': dict({
+          'label': 'Current URL',
           'type': 'string',
         }),
         'video_mode': dict({

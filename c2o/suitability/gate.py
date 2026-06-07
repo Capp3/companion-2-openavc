@@ -17,6 +17,10 @@ _UPSTREAM_AUTH_REF = "open-avc/openavc-drivers AGENTS.md §1 — Custom auth sch
 _UPSTREAM_TRANSPORT_REF = (
     "open-avc/openavc-drivers AGENTS.md §1 — YAML drivers require a recognised transport."
 )
+_UPSTREAM_TRANSPORT_NOT_IMPLEMENTED_REF = (
+    "open-avc/openavc-drivers AGENTS.md §1 — Use Python/manual authoring for transports "
+    "C2O cannot currently express."
+)
 _UPSTREAM_COMMANDS_REF = (
     "open-avc/openavc-drivers AGENTS.md §1 — Cryptographic/challenge-response or "
     "computed payloads require Python."
@@ -36,11 +40,26 @@ _KNOWN_TRANSPORT_PATTERNS = (
     "SerialPort",
     "fetch(",
     "axios",
-    "got(",
+    "got(",  # direct got() call
+    "got.",  # got.get(), got.post(), etc. (method-style HTTP client)
     "node-fetch",
     "OSC",
     "osc-js",
     "osc-min",
+)
+_OSC_TRANSPORT_PATTERNS = (
+    "from 'osc-js'",
+    'from "osc-js"',
+    "require('osc-js')",
+    'require("osc-js")',
+    "from 'osc-min'",
+    'from "osc-min"',
+    "require('osc-min')",
+    'require("osc-min")',
+    "new OSC",
+    "sendOSC(",
+    "sendOsc(",
+    "oscSend(",
 )
 _VOLATILE_COMMAND_PATTERNS = (
     "Date.now(",
@@ -80,6 +99,7 @@ def assess_module(parsed: ParsedModule) -> GateResult:
     blockers.extend(_check_binary_framing(parsed))
     blockers.extend(_check_auth_non_telnet(parsed))
     blockers.extend(_check_transport_unknown(parsed))
+    blockers.extend(_check_transport_not_implemented(parsed))
     blockers.extend(_check_commands_not_static(parsed))
     blockers.extend(_check_responses_not_expressible(parsed))
     return GateResult(eligible=not blockers, blockers=tuple(blockers))
@@ -155,6 +175,26 @@ def _check_transport_unknown(parsed: ParsedModule) -> list[Blocker]:
             message="Transport could not be inferred for YAML emission.",
             evidence=f"{rel}:1 — no recognised transport helper found",
             upstream_reference=_UPSTREAM_TRANSPORT_REF,
+        )
+    ]
+
+
+def _check_transport_not_implemented(parsed: ParsedModule) -> list[Blocker]:
+    hit = _first_line_matching(
+        parsed,
+        lambda line: any(pattern in line for pattern in _OSC_TRANSPORT_PATTERNS),
+    )
+    if hit is None:
+        return []
+    return [
+        Blocker(
+            code=BlockerCode.TRANSPORT_NOT_IMPLEMENTED,
+            message=(
+                "OSC transport detected; no OSC extractor is implemented. "
+                "Decline this module and author the OpenAVC driver manually."
+            ),
+            evidence=hit,
+            upstream_reference=_UPSTREAM_TRANSPORT_NOT_IMPLEMENTED_REF,
         )
     ]
 

@@ -28,6 +28,18 @@ _MISSING_DISCOVERY_KEYS: Final[tuple[str, ...]] = (
     "oui",
     "snmp_pen",
 )
+_MANUFACTURER_OUI: Final[dict[str, tuple[str, ...]]] = {
+    # Panasonic Corporation
+    "panasonic": ("00:80:45", "70:1d:7c", "00:60:b0"),
+    # Vaddio / Legrand AV
+    "vaddio": ("00:1e:c0", "08:00:6b"),
+    "legrand": ("00:1e:c0", "08:00:6b"),
+    "legrand av": ("00:1e:c0", "08:00:6b"),
+    # Electronic Theatre Controls
+    "etc": ("00:c0:16",),
+    "electronic theatre controls": ("00:c0:16",),
+    "eos": ("00:c0:16",),
+}
 
 
 class DiscoveryExtractionError(ValueError):
@@ -40,11 +52,17 @@ def extract_discovery(
     compatible_models: CompatibleModelsSection,
 ) -> tuple[DiscoverySection, ReviewReport]:
     """Build statically provable discovery hints and review flags."""
+    manufacturer_alias = _manufacturer_aliases(manifest, compatible_models)
+    oui = _oui_hints(manufacturer_alias)
     section = DiscoverySection(
         port_open=_port_open(config_fields.default_config.get("port")),
-        manufacturer_alias=_manufacturer_aliases(manifest, compatible_models),
+        manufacturer_alias=manufacturer_alias,
+        oui=oui,
     )
-    return section, ReviewReport(flags=(_missing_discovery_flag(),))
+    flags = [_missing_discovery_flag()]
+    if oui:
+        flags.append(_oui_from_registry_flag(manufacturer_alias, oui))
+    return section, ReviewReport(flags=tuple(flags))
 
 
 def _port_open(raw_port: object) -> tuple[int, ...]:
@@ -90,15 +108,21 @@ def _dedup_case_insensitive(values: Iterable[str]) -> tuple[str, ...]:
     seen: set[str] = set()
     out: list[str] = []
     for raw in values:
-        value = raw.strip()
-        if not value:
+        normalised = raw.strip().casefold()
+        if not normalised:
             continue
-        key = value.casefold()
-        if key in seen:
+        if normalised in seen:
             continue
-        seen.add(key)
-        out.append(value)
+        seen.add(normalised)
+        out.append(normalised)
     return tuple(out)
+
+
+def _oui_hints(manufacturer_alias: tuple[str, ...]) -> tuple[str, ...]:
+    values: list[str] = []
+    for alias in manufacturer_alias:
+        values.extend(_MANUFACTURER_OUI.get(alias, ()))
+    return _dedup_case_insensitive(values)
 
 
 def _missing_discovery_flag() -> ReviewFlag:
@@ -111,4 +135,20 @@ def _missing_discovery_flag() -> ReviewFlag:
             "extend by hand if the device supports them."
         ),
         details={"missing": ",".join(_MISSING_DISCOVERY_KEYS)},
+    )
+
+
+def _oui_from_registry_flag(manufacturer_alias: tuple[str, ...], oui: tuple[str, ...]) -> ReviewFlag:
+    matching_aliases = [alias for alias in manufacturer_alias if alias in _MANUFACTURER_OUI]
+    return ReviewFlag(
+        code=ReviewCode.DISCOVERY_OUI_FROM_REGISTRY,
+        field="discovery.oui",
+        message=(
+            "Discovery OUI hints were added from C2O's curated manufacturer registry "
+            "and should be reviewed against device hardware."
+        ),
+        details={
+            "manufacturer_alias": ",".join(matching_aliases),
+            "oui": ",".join(oui),
+        },
     )

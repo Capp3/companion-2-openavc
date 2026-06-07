@@ -14,6 +14,7 @@ class BlockerCode(StrEnum):
     BINARY_FRAMING = "binary_framing"
     AUTH_NON_TELNET = "auth_non_telnet"
     TRANSPORT_UNKNOWN = "transport_unknown"
+    TRANSPORT_NOT_IMPLEMENTED = "transport_not_implemented"
     COMMANDS_NOT_STATIC = "commands_not_static"
     RESPONSES_NOT_EXPRESSIBLE = "responses_not_expressible"
 

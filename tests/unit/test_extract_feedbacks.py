@@ -40,3 +40,15 @@ def test_bmd_feedbacks_extract_assignment_built_object(bmd_webpresenter: Path) -
     assert option.label == "State"
     assert option.default == "Streaming"
     assert option.values == ("Idle", "Connecting", "Streaming", "Interrupted")
+
+
+def test_panasonic_feedbacks_extract_factory_definitions(panasonic_ptz: Path) -> None:
+    section, review = extract_feedbacks(parse_module(panasonic_ptz))
+
+    assert len(review) == 0
+    assert len(section.feedbacks) >= 10
+    assert [feedback.id for feedback in section.feedbacks[:3]] == [
+        "powerState",
+        "tallyState",
+        "tally2State",
+    ]

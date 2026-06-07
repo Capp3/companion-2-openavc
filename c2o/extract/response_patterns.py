@@ -9,6 +9,13 @@ from tree_sitter import Node
 
 from c2o.model.driver import ResponseEntry, ResponseMappingEntry
 from c2o.parse.js import node_text
+from c2o.parse.store_data import (
+    CapturedField,
+    ConstantValue,
+    StoreDataTriple,
+    SuffixCapture,
+    TransformedValue,
+)
 
 _BOOLEAN_METHODS = frozenset({"includes", "startsWith", "endsWith", "test"})
 _STRING_METHODS = frozenset(
@@ -92,6 +99,48 @@ def build_fan_out_entry(device_key: str, state_var: str) -> ResponseEntry | None
     if not compile_check(match):
         return None
     return ResponseEntry(match=match, set={state_var: "$1"})
+
+
+def triple_to_response_entry(
+    triple: StoreDataTriple,
+    variable_id: str,
+) -> ResponseEntry | None:
+    """Build a response entry from a decoded storeData triple."""
+    if isinstance(triple.value, TransformedValue):
+        return None
+
+    if isinstance(triple.value, ConstantValue):
+        match = anchor_pattern(re.escape(triple.token))
+        if not compile_check(match):
+            return None
+        return ResponseEntry(match=match, set={variable_id: triple.value.value})
+
+    if isinstance(triple.value, SuffixCapture):
+        match = anchor_pattern(f"{re.escape(triple.value.prefix)}(.+)")
+        if not compile_check(match):
+            return None
+        return ResponseEntry(
+            match=match,
+            mappings=(ResponseMappingEntry(group=1, state=variable_id),),
+        )
+
+    if isinstance(triple.value, CapturedField):
+        expected_position = triple.token.count(":") + 1
+        if triple.value.position != expected_position:
+            return None
+        match = anchor_pattern(f"{re.escape(triple.token)}:(.+)")
+        if not compile_check(match):
+            return None
+        if triple.value.is_integer:
+            mapping = ResponseMappingEntry(group=1, state=variable_id, type="integer")
+        else:
+            mapping = ResponseMappingEntry(group=1, state=variable_id)
+        return ResponseEntry(
+            match=match,
+            mappings=(mapping,),
+        )
+
+    return None
 
 
 def build_entry(

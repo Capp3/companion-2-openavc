@@ -8,6 +8,7 @@ from tree_sitter import Node
 
 from c2o.model.driver import CompanionStyleValue
 from c2o.parse.colors import decode_color_number
+from c2o.parse.cross_file import DefinitionObject, resolve_factory_call_definitions
 from c2o.parse.js import (
     ParsedModule,
     collect_inline_object_pairs,
@@ -33,16 +34,29 @@ def collect_definition_objects(
 
         source = parsed.sources[call.rel_path]
         if first_arg.type == "object":
-            pairs = collect_inline_object_pairs(first_arg, source)
+            definition_nodes = [
+                DefinitionObject(key=key, node=node, source=source)
+                for key, node in collect_inline_object_pairs(first_arg, source)
+            ]
+        elif first_arg.type == "call_expression":
+            resolved_factory = resolve_factory_call_definitions(first_arg, parsed, source=source)
+            definition_nodes = resolved_factory if resolved_factory is not None else []
         else:
             resolved_pairs = resolve_object_via_assignments(
                 source=source,
                 identifier_node=first_arg,
                 call_node=call.node,
             )
-            pairs = resolved_pairs if resolved_pairs is not None else []
+            definition_nodes = (
+                [
+                    DefinitionObject(key=key, node=node, source=source)
+                    for key, node in resolved_pairs
+                ]
+                if resolved_pairs is not None
+                else []
+            )
         definitions.extend(
-            (definition_id, object_node, source) for definition_id, object_node in pairs
+            (definition.key, definition.node, definition.source) for definition in definition_nodes
         )
     return definitions
 

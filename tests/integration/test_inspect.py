@@ -62,7 +62,7 @@ def test_inspect_eligible_prints_manifest_metadata(dummy_device: Path) -> None:
     assert '  "QUERY INPUT\\n"' in result.stdout
     assert "Discovery:" in result.stdout
     assert "  port_open: [5000]" in result.stdout
-    assert '  manufacturer_alias: ["Generic"]' in result.stdout
+    assert '  manufacturer_alias: ["generic"]' in result.stdout
     assert "On-connect: 0 commands" in result.stdout
     assert "Compatible models: 1 entry" in result.stdout
     assert '  Generic: ["Dummy Model A"] (untested)' in result.stdout
@@ -112,7 +112,7 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert '  "STREAM STATE:\\n\\n"' in result.stdout
     assert "Discovery:" in result.stdout
     assert "  port_open: [9977]" in result.stdout
-    assert '  manufacturer_alias: ["Blackmagic Design", "Blackmagic"]' in result.stdout
+    assert '  manufacturer_alias: ["blackmagic design", "blackmagic"]' in result.stdout
     assert "On-connect: 0 commands" in result.stdout
     assert "Compatible models: 1 entry" in result.stdout
     assert '  Blackmagic Design: ["WebPresenter HD", "WebPresenter 4K"] (untested)' in result.stdout
@@ -122,7 +122,7 @@ def test_inspect_bmd_webpresenter_prints_id_coercion_flag(bmd_webpresenter: Path
     assert "  initial_state: 17 entries" in result.stdout
     assert "  controls: 17" in result.stdout
     assert "  command_handlers: 0" in result.stdout
-    assert "Review flags: 22" in result.stdout
+    assert "Review flags: 27" in result.stdout
     assert "[id_coerced] id -" in result.stdout
 
 
@@ -146,7 +146,7 @@ def test_inspect_static_on_connect_prints_on_connect_commands(static_on_connect:
     assert "  port: integer (default: 6000)" in result.stdout
     assert "Discovery:" in result.stdout
     assert "  port_open: [6000]" in result.stdout
-    assert '  manufacturer_alias: ["Vendor X", "Vendor"]' in result.stdout
+    assert '  manufacturer_alias: ["vendor x", "vendor"]' in result.stdout
     assert "On-connect: 2 commands" in result.stdout
     assert '  "HELLO\\n"' in result.stdout
     assert '  "INIT\\n"' in result.stdout
@@ -172,11 +172,11 @@ def test_inspect_http_device_prints_http_command_previews(http_device: Path) -> 
     assert "  initial_state: 0 entries" in result.stdout
     assert "  controls: 0" in result.stdout
     assert "  command_handlers: 3" in result.stdout
-    assert "  match GET /api/status.*" in result.stdout
+    assert r"  match GET /api/status\?include=[^&]*.*" in result.stdout
     assert "  match POST /api/event.*" in result.stdout
     assert "  match POST /api/payload.*" in result.stdout
     assert "Discovery:" in result.stdout
-    assert '  manufacturer_alias: ["Generic"]' in result.stdout
+    assert '  manufacturer_alias: ["generic"]' in result.stdout
     assert "Compatible models: 1 entry" in result.stdout
     assert '  Generic: ["HTTP-1"] (untested)' in result.stdout
 
@@ -194,9 +194,9 @@ def test_inspect_unknown_vendor_emits_review_flag(unknown_vendor: Path) -> None:
     assert "State variables: 0" in result.stdout
     assert "Commands: 0" in result.stdout
     assert "Discovery:" in result.stdout
-    assert '  manufacturer_alias: ["Blackmagic Designs", "Blackmagic"]' in result.stdout
+    assert '  manufacturer_alias: ["blackmagic designs", "blackmagic"]' in result.stdout
     assert "Compatible models: 1 entry" in result.stdout
-    assert "Review flags: 3" in result.stdout
+    assert "Review flags: 4" in result.stdout
     assert "[unknown_manufacturer] manufacturer -" in result.stdout
 
 
